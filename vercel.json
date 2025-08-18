@@ -1,0 +1,13 @@
+{
+  "buildCommand": "prisma generate && next build",
+  "framework": "nextjs",
+  "installCommand": "npm install",
+  "devCommand": "next dev",
+  "outputDirectory": ".next",
+  "functions": {
+	"app/api/**/*.ts": {
+	  "maxDuration": 10
+	}
+  },
+  "crons": []
+}

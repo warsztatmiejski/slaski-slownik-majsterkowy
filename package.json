@@ -1,0 +1,50 @@
+{
+  "name": "silesian-polish-dictionary",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+	"dev": "next dev",
+	"build": "prisma generate && next build",
+	"start": "next start",
+	"lint": "next lint",
+	"db:generate": "prisma generate",
+	"db:push": "prisma db push",
+	"db:migrate": "prisma migrate dev",
+	"db:migrate:deploy": "prisma migrate deploy",
+	"db:studio": "prisma studio",
+	"db:seed": "tsx prisma/seed.ts",
+	"postinstall": "prisma generate",
+	"vercel-build": "prisma generate && prisma migrate deploy && next build"
+  },
+  "dependencies": {
+	"@prisma/client": "^6.11.1",
+	"@radix-ui/react-dialog": "^1.1.2",
+	"@radix-ui/react-dropdown-menu": "^2.1.2",
+	"@radix-ui/react-label": "^2.1.0",
+	"@radix-ui/react-select": "^2.1.2",
+	"@radix-ui/react-slot": "^1.1.0",
+	"@radix-ui/react-toast": "^1.2.2",
+	"class-variance-authority": "^0.7.1",
+	"clsx": "^2.1.1",
+	"lucide-react": "^0.468.0",
+	"next": "15.4.0",
+	"next-auth": "5.0.0-beta.25",
+	"react": "19.1.0",
+	"react-dom": "19.1.0",
+	"tailwind-merge": "^2.5.4",
+	"tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+	"@types/node": "^22.10.1",
+	"@types/react": "^19.0.1",
+	"@types/react-dom": "^19.0.1",
+	"autoprefixer": "^10.4.20",
+	"eslint": "^9.16.0",
+	"eslint-config-next": "15.4.0",
+	"postcss": "^8.5.1",
+	"prisma": "^6.11.1",
+	"tailwindcss": "4.0.0",
+	"tsx": "^4.19.2",
+	"typescript": "^5.7.2"
+  }
+}

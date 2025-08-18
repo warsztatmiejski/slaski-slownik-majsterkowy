@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  slug        String   @unique
+  type        CategoryType
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  entries     DictionaryEntry[]
+
+  @@map("categories")
+}
+
+model DictionaryEntry {
+  id              String      @id @default(cuid())
+  sourceWord      String
+  sourceLang      Language
+  targetWord      String
+  targetLang      Language
+  status          EntryStatus @default(PENDING)
+
+  // Additional translations for the same word
+  alternativeTranslations String[]
+
+  // Detailed information
+  meanings        EntryMeaning[]
+  exampleSentences ExampleSentence[]
+  pronunciation   String?
+
+  // Categorization
+  categoryId      String
+  category        Category @relation(fields: [categoryId], references: [id])
+
+  // Metadata
+  submittedBy     String?  // Email or name of submitter (for public submissions)
+  submittedAt     DateTime @default(now())
+  approvedAt      DateTime?
+  approvedBy      String?  // Admin user ID
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([sourceWord])
+  @@index([targetWord])
+  @@index([sourceLang, targetLang])
+  @@index([status])
+  @@index([categoryId])
+  @@map("dictionary_entries")
+}
+
+model EntryMeaning {
+  id        String @id @default(cuid())
+  meaning   String
+  context   String? // Technical context where this meaning applies
+  order     Int     // For ordering multiple meanings
+
+  entryId   String
+  entry     DictionaryEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@map("entry_meanings")
+}
+
+model ExampleSentence {
+  id              String @id @default(cuid())
+  sourceText      String
+  translatedText  String
+  context         String? // Where this example would be used
+  order           Int     // For ordering multiple examples
+
+  entryId         String
+  entry           DictionaryEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@map("example_sentences")
+}
+
+model PublicSubmission {
+  id              String   @id @default(cuid())
+  sourceWord      String
+  sourceLang      Language
+  targetWord      String
+  targetLang      Language
+  meanings        String[] // JSON array of meanings
+  exampleSentences String[] // JSON array of example sentences
+  pronunciation   String?
+  categoryId      String
+
+  // Submitter info
+  submitterName   String?
+  submitterEmail  String?
+  notes           String?  // Additional notes from submitter
+
+  // Status
+  status          SubmissionStatus @default(PENDING)
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  reviewNotes     String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("public_submissions")
+}
+
+model User {
+  id       String   @id @default(cuid())
+  email    String   @unique
+  name     String?
+  role     UserRole @default(ADMIN)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+enum Language {
+  SILESIAN
+  POLISH
+}
+
+enum CategoryType {
+  TRADITIONAL
+  MODERN
+}
+
+enum EntryStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum UserRole {
+  ADMIN
+}
