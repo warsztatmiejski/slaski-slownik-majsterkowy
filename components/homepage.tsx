@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 import { Search, ExternalLink, Plus, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import ThemeToggle from '@/components/theme-toggle'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import ThemeToggle from '@/components/theme-toggle'
 
 // Mock data - in real app this would come from the database
 const mockStats = {
@@ -101,18 +101,18 @@ export default function HomePage() {
   }
 
   return (
-	<div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+	<div className="min-h-screen bg-background">
 	  {/* Header */}
-	  <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+	  <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
 		<div className="container mx-auto px-4 py-4">
 		  <div className="flex items-center justify-between">
 			<div className="flex items-center space-x-4">
-			  <BookOpen className="h-8 w-8 text-blue-600" />
+			  <BookOpen className="h-8 w-8 text-primary" />
 			  <div>
-				<h1 className="text-2xl font-bold text-gray-900">
+				<h1 className="text-2xl font-bold text-foreground">
 				  Śląski Słownik Majsterkowy
 				</h1>
-				<p className="text-sm text-gray-600">
+				<p className="text-sm text-muted-foreground">
 				  Techniczny słownik śląsko-polski
 				</p>
 			  </div>
@@ -139,13 +139,13 @@ export default function HomePage() {
 		<div className="max-w-3xl mx-auto mb-12">
 		  <form onSubmit={handleSearch} className="relative">
 			<div className="relative">
-			  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+			  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
 			  <Input
 				type="text"
 				value={searchTerm}
 				onChange={(e) => setSearchTerm(e.target.value)}
 				placeholder="Szukaj słów po śląsku lub polsku..."
-				className="pl-10 pr-4 py-4 text-lg border-2 focus:border-blue-500 rounded-lg shadow-sm"
+				className="pl-10 pr-4 py-4 text-lg border-2 focus:border-primary rounded-lg shadow-sm"
 			  />
 			</div>
 			<Button
@@ -161,15 +161,15 @@ export default function HomePage() {
 		{/* Word Entry Panel */}
 		{selectedEntry && (
 		  <div className="max-w-3xl mx-auto mb-12">
-			<Card className="border-2 border-blue-200 shadow-lg">
+			<Card className="border-2 border-primary/20 shadow-lg">
 			  <CardHeader>
 				<div className="flex items-start justify-between">
 				  <div>
-					<CardTitle className="text-3xl text-blue-900">
+					<CardTitle className="text-3xl text-primary">
 					  {selectedEntry.sourceWord}
 					</CardTitle>
 					{selectedEntry.pronunciation && (
-					  <p className="text-sm text-gray-600 font-mono mt-1">
+					  <p className="text-sm text-muted-foreground font-mono mt-1">
 						[{selectedEntry.pronunciation}]
 					  </p>
 					)}
@@ -177,7 +177,7 @@ export default function HomePage() {
 				  <div className="text-right">
 					<Badge variant="secondary">{selectedEntry.category}</Badge>
 					{selectedEntry.partOfSpeech && (
-					  <p className="text-sm text-gray-600 mt-1">
+					  <p className="text-sm text-muted-foreground mt-1">
 						{selectedEntry.partOfSpeech}
 					  </p>
 					)}
@@ -188,20 +188,20 @@ export default function HomePage() {
 				<div className="space-y-6">
 				  {/* Translation */}
 				  <div>
-					<h3 className="font-semibold text-lg mb-2">Tłumaczenie:</h3>
-					<p className="text-xl text-green-700 font-medium">
+					<h3 className="font-semibold text-lg mb-2 text-foreground">Tłumaczenie:</h3>
+					<p className="text-xl text-primary font-medium">
 					  {selectedEntry.targetWord}
 					</p>
 				  </div>
 
 				  {/* Meanings */}
 				  <div>
-					<h3 className="font-semibold text-lg mb-2">Znaczenie:</h3>
+					<h3 className="font-semibold text-lg mb-2 text-foreground">Znaczenie:</h3>
 					{selectedEntry.meanings.map((meaning, index) => (
 					  <div key={index} className="mb-2">
-						<p className="text-gray-800">{meaning.meaning}</p>
+						<p className="text-foreground">{meaning.meaning}</p>
 						{meaning.context && (
-						  <p className="text-sm text-gray-600 italic">
+						  <p className="text-sm text-muted-foreground italic">
 							Kontekst: {meaning.context}
 						  </p>
 						)}
@@ -211,13 +211,13 @@ export default function HomePage() {
 
 				  {/* Examples */}
 				  <div>
-					<h3 className="font-semibold text-lg mb-2">Przykłady użycia:</h3>
+					<h3 className="font-semibold text-lg mb-2 text-foreground">Przykłady użycia:</h3>
 					{selectedEntry.examples.map((example, index) => (
-					  <div key={index} className="bg-gray-50 p-3 rounded-lg mb-2">
-						<p className="text-blue-800 font-medium">
+					  <div key={index} className="bg-muted p-3 rounded-lg mb-2">
+						<p className="text-primary font-medium">
 						  {example.sourceText}
 						</p>
-						<p className="text-gray-700">
+						<p className="text-muted-foreground">
 						  {example.translatedText}
 						</p>
 					  </div>
@@ -232,13 +232,13 @@ export default function HomePage() {
 		{/* Statistics and Featured Content */}
 		<div className="grid md:grid-cols-3 gap-6 mb-12">
 		  {/* Dictionary Stats */}
-		  <Card className="stats-card">
+		  <Card>
 			<CardHeader>
 			  <CardTitle className="text-lg">Słownik w liczbach</CardTitle>
 			</CardHeader>
 			<CardContent>
 			  <div className="text-center">
-				<p className="text-3xl font-bold text-blue-600">
+				<p className="text-3xl font-bold text-primary">
 				  {mockStats.totalEntries.toLocaleString()}
 				</p>
 				<p className="text-sm text-muted-foreground">słów w słowniku</p>
@@ -247,7 +247,7 @@ export default function HomePage() {
 		  </Card>
 
 		  {/* Recent Entries */}
-		  <Card className="stats-card">
+		  <Card>
 			<CardHeader>
 			  <CardTitle className="text-lg">Ostatnio dodane</CardTitle>
 			</CardHeader>
@@ -257,7 +257,7 @@ export default function HomePage() {
 				  <div key={index} className="flex justify-between items-center">
 					<button
 					  onClick={() => handleWordClick(entry.word)}
-					  className="text-blue-600 hover:underline font-medium"
+					  className="text-primary hover:underline font-medium"
 					>
 					  {entry.word}
 					</button>
@@ -271,17 +271,17 @@ export default function HomePage() {
 		  </Card>
 
 		  {/* Featured Example */}
-		  <Card className="stats-card">
+		  <Card>
 			<CardHeader>
 			  <CardTitle className="text-lg">Przykład dnia</CardTitle>
 			</CardHeader>
 			<CardContent>
 			  <div className="space-y-3">
-				<p className="text-blue-800 font-medium">
+				<p className="text-primary font-medium">
 				  Idã na{' '}
 				  <button
 					onClick={() => handleWordClick(mockStats.featuredExample.highlightedWord)}
-					className="bg-yellow-200 px-1 rounded hover:bg-yellow-300 transition-colors"
+					className="bg-yellow-200 dark:bg-yellow-800/30 px-1 rounded hover:bg-yellow-300 dark:hover:bg-yellow-700/40 transition-colors"
 				  >
 					{mockStats.featuredExample.highlightedWord}
 				  </button>
@@ -298,9 +298,9 @@ export default function HomePage() {
 		{/* Categories Section */}
 		<div className="grid md:grid-cols-2 gap-6">
 		  {/* Traditional Categories */}
-		  <Card className="category-card">
+		  <Card>
 			<CardHeader>
-			  <CardTitle className="text-xl text-amber-700">Branże tradycyjne</CardTitle>
+			  <CardTitle className="text-xl text-amber-600 dark:text-amber-400">Branże tradycyjne</CardTitle>
 			  <CardDescription>
 				Terminologia śląska z tradycyjnych dziedzin przemysłu
 			  </CardDescription>
@@ -322,9 +322,9 @@ export default function HomePage() {
 		  </Card>
 
 		  {/* Modern Categories */}
-		  <Card className="category-card">
+		  <Card>
 			<CardHeader>
-			  <CardTitle className="text-xl text-blue-700">Branże nowoczesne</CardTitle>
+			  <CardTitle className="text-xl text-blue-600 dark:text-blue-400">Branże nowoczesne</CardTitle>
 			  <CardDescription>
 				Współczesne terminy techniczne po śląsku
 			  </CardDescription>
@@ -348,9 +348,9 @@ export default function HomePage() {
 	  </main>
 
 	  {/* Footer */}
-	  <footer className="border-t bg-gray-50 mt-16">
+	  <footer className="border-t bg-muted mt-16">
 		<div className="container mx-auto px-4 py-8">
-		  <div className="text-center text-gray-600">
+		  <div className="text-center text-muted-foreground">
 			<p className="mb-2">
 			  © 2025 Śląski Słownik Majsterkowy - Zachowujemy śląską mowę techniczną
 			</p>
@@ -358,7 +358,7 @@ export default function HomePage() {
 			  Projekt realizowany przez{' '}
 			  <a
 				href="https://warsztatmiejski.org"
-				className="text-blue-600 hover:underline"
+				className="text-primary hover:underline"
 				target="_blank"
 				rel="noopener noreferrer"
 			  >
