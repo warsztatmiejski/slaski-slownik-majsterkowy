@@ -184,18 +184,18 @@ export default function AddWordPage() {
 
   if (submitSuccess) {
 	return (
-	  <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
+	  <div className="min-h-screen bg-gradient-to-b from-green-50 to-background dark:from-green-900/20">
 		<div className="container mx-auto px-4 py-16">
 		  <div className="max-w-2xl mx-auto text-center">
-			<div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
-			  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<div className="bg-green-100 dark:bg-green-900/30 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
+			  <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
 			  </svg>
 			</div>
-			<h1 className="text-3xl font-bold text-gray-900 mb-4">
+			<h1 className="text-3xl font-bold text-foreground mb-4">
 			  Dziękujemy za zgłoszenie!
 			</h1>
-			<p className="text-lg text-gray-600 mb-8">
+			<p className="text-lg text-muted-foreground mb-8">
 			  Twoje słowo zostało dodane do kolejki weryfikacji. Po zatwierdzeniu przez moderatorów
 			  pojawi się w słowniku.
 			</p>
@@ -214,16 +214,16 @@ export default function AddWordPage() {
   }
 
   return (
-	<div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+	<div className="min-h-screen bg-gradient-to-b from-slate-50 to-background dark:from-slate-900/20">
 	  {/* Header */}
-	  <header className="border-b bg-white">
+	  <header className="border-b bg-card">
 		<div className="container mx-auto px-4 py-4">
 		  <div className="flex items-center justify-between">
 			<Button variant="ghost" onClick={() => window.location.href = '/'}>
 			  <ArrowLeft className="mr-2 h-4 w-4" />
 			  Powrót do słownika
 			</Button>
-			<h1 className="text-2xl font-bold text-gray-900">
+			<h1 className="text-2xl font-bold text-foreground">
 			  Dodaj nowe słowo
 			</h1>
 			<div></div>
@@ -307,7 +307,7 @@ export default function AddWordPage() {
 						</SelectTrigger>
 						<SelectContent>
 						  <div className="p-2">
-							<div className="text-sm font-medium text-gray-500 mb-2">Branże tradycyjne</div>
+							<div className="text-sm font-medium text-muted-foreground mb-2">Branże tradycyjne</div>
 							{categories.filter(c => c.type === 'traditional').map(category => (
 							  <SelectItem key={category.id} value={category.id}>
 								{category.name}
@@ -316,7 +316,7 @@ export default function AddWordPage() {
 						  </div>
 						  <Separator />
 						  <div className="p-2">
-							<div className="text-sm font-medium text-gray-500 mb-2">Branże nowoczesne</div>
+							<div className="text-sm font-medium text-muted-foreground mb-2">Branże nowoczesne</div>
 							{categories.filter(c => c.type === 'modern').map(category => (
 							  <SelectItem key={category.id} value={category.id}>
 								{category.name}
@@ -474,7 +474,7 @@ export default function AddWordPage() {
 				{/* Submitter Information */}
 				<div className="space-y-4">
 				  <h3 className="text-lg font-semibold">Informacje kontaktowe (opcjonalnie)</h3>
-				  <p className="text-sm text-gray-600">
+				  <p className="text-sm text-muted-foreground">
 					Podanie danych kontaktowych pozwoli nam skontaktować się w razie pytań o zgłoszenie.
 				  </p>
 

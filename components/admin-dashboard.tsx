@@ -99,16 +99,16 @@ export default function AdminDashboard() {
   }
 
   return (
-	<div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+	<div className="min-h-screen bg-gradient-to-b from-slate-50 to-background dark:from-slate-900/20">
 	  {/* Admin Header */}
-	  <header className="border-b bg-white shadow-sm">
+	  <header className="border-b bg-card shadow-sm">
 		<div className="container mx-auto px-4 py-4">
 		  <div className="flex items-center justify-between">
 			<div className="flex items-center space-x-4">
-			  <Settings className="h-6 w-6 text-blue-600" />
+			  <Settings className="h-6 w-6 text-primary" />
 			  <div>
-				<h1 className="text-2xl font-bold text-gray-900">Panel administratora</h1>
-				<p className="text-sm text-gray-600">Śląski Słownik Majsterkowy</p>
+				<h1 className="text-2xl font-bold text-foreground">Panel administratora</h1>
+				<p className="text-sm text-muted-foreground">Śląski Słownik Majsterkowy</p>
 			  </div>
 			</div>
 			<div className="flex items-center space-x-4">
@@ -132,10 +132,10 @@ export default function AdminDashboard() {
 			<CardContent className="p-6">
 			  <div className="flex items-center justify-between">
 				<div>
-				  <p className="text-sm font-medium text-gray-600">Wpisy w słowniku</p>
-				  <p className="text-3xl font-bold text-blue-600">{mockStats.totalEntries}</p>
+				  <p className="text-sm font-medium text-muted-foreground">Wpisy w słowniku</p>
+				  <p className="text-3xl font-bold text-primary">{mockStats.totalEntries}</p>
 				</div>
-				<BookOpen className="h-8 w-8 text-blue-600" />
+				<BookOpen className="h-8 w-8 text-primary" />
 			  </div>
 			</CardContent>
 		  </Card>
@@ -144,10 +144,10 @@ export default function AdminDashboard() {
 			<CardContent className="p-6">
 			  <div className="flex items-center justify-between">
 				<div>
-				  <p className="text-sm font-medium text-gray-600">Oczekujące zgłoszenia</p>
-				  <p className="text-3xl font-bold text-orange-600">{mockStats.pendingSubmissions}</p>
+				  <p className="text-sm font-medium text-muted-foreground">Oczekujące zgłoszenia</p>
+				  <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{mockStats.pendingSubmissions}</p>
 				</div>
-				<Clock className="h-8 w-8 text-orange-600" />
+				<Clock className="h-8 w-8 text-orange-600 dark:text-orange-400" />
 			  </div>
 			</CardContent>
 		  </Card>
@@ -156,10 +156,10 @@ export default function AdminDashboard() {
 			<CardContent className="p-6">
 			  <div className="flex items-center justify-between">
 				<div>
-				  <p className="text-sm font-medium text-gray-600">Zatwierdzone dziś</p>
-				  <p className="text-3xl font-bold text-green-600">{mockStats.approvedToday}</p>
+				  <p className="text-sm font-medium text-muted-foreground">Zatwierdzone dziś</p>
+				  <p className="text-3xl font-bold text-green-600 dark:text-green-400">{mockStats.approvedToday}</p>
 				</div>
-				<Check className="h-8 w-8 text-green-600" />
+				<Check className="h-8 w-8 text-green-600 dark:text-green-400" />
 			  </div>
 			</CardContent>
 		  </Card>
@@ -168,10 +168,10 @@ export default function AdminDashboard() {
 			<CardContent className="p-6">
 			  <div className="flex items-center justify-between">
 				<div>
-				  <p className="text-sm font-medium text-gray-600">Odrzucone dziś</p>
-				  <p className="text-3xl font-bold text-red-600">{mockStats.rejectedToday}</p>
+				  <p className="text-sm font-medium text-muted-foreground">Odrzucone dziś</p>
+				  <p className="text-3xl font-bold text-red-600 dark:text-red-400">{mockStats.rejectedToday}</p>
 				</div>
-				<X className="h-8 w-8 text-red-600" />
+				<X className="h-8 w-8 text-red-600 dark:text-red-400" />
 			  </div>
 			</CardContent>
 		  </Card>
@@ -203,12 +203,12 @@ export default function AdminDashboard() {
 			  <CardContent>
 				<div className="space-y-4">
 				  {mockPendingSubmissions.map((submission) => (
-					<Card key={submission.id} className="border-orange-200">
+					<Card key={submission.id} className="border-orange-200 dark:border-orange-800">
 					  <CardContent className="p-6">
 						<div className="flex items-start justify-between">
 						  <div className="space-y-3 flex-1">
 							<div className="flex items-center space-x-3">
-							  <h3 className="text-lg font-semibold text-blue-900">
+							  <h3 className="text-lg font-semibold text-primary">
 								{submission.sourceWord} → {submission.targetWord}
 							  </h3>
 							  <Badge variant="outline">{submission.category}</Badge>
@@ -219,16 +219,16 @@ export default function AdminDashboard() {
 
 							<div className="grid md:grid-cols-2 gap-4 text-sm">
 							  <div>
-								<p className="font-medium text-gray-700">Znaczenia:</p>
-								<ul className="list-disc list-inside text-gray-600">
+								<p className="font-medium text-foreground">Znaczenia:</p>
+								<ul className="list-disc list-inside text-muted-foreground">
 								  {submission.meanings.map((meaning, index) => (
 									<li key={index}>{meaning}</li>
 								  ))}
 								</ul>
 							  </div>
 							  <div>
-								<p className="font-medium text-gray-700">Przykłady:</p>
-								<ul className="list-disc list-inside text-gray-600">
+								<p className="font-medium text-foreground">Przykłady:</p>
+								<ul className="list-disc list-inside text-muted-foreground">
 								  {submission.examples.map((example, index) => (
 									<li key={index}>{example}</li>
 								  ))}
@@ -236,7 +236,7 @@ export default function AdminDashboard() {
 							  </div>
 							</div>
 
-							<div className="text-xs text-gray-500">
+							<div className="text-xs text-muted-foreground">
 							  Zgłoszone przez: {submission.submitterName} ({submission.submitterEmail}) • {formatDate(submission.submittedAt)}
 							</div>
 						  </div>
@@ -301,7 +301,7 @@ export default function AdminDashboard() {
 							  size="sm"
 							  onClick={() => handleReviewSubmission(submission.id, 'reject')}
 							>
-							  <X className="h-4 w-4 text-red-600" />
+							  <X className="h-4 w-4 text-red-600 dark:text-red-400" />
 							</Button>
 							<Button
 							  size="sm"
@@ -332,7 +332,7 @@ export default function AdminDashboard() {
 				  </div>
 				  <div className="flex space-x-2">
 					<div className="relative">
-					  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+					  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
 					  <Input
 						placeholder="Szukaj wpisów..."
 						value={searchTerm}
@@ -350,20 +350,20 @@ export default function AdminDashboard() {
 			  <CardContent>
 				<div className="space-y-4">
 				  {mockApprovedEntries.map((entry) => (
-					<Card key={entry.id} className="border-green-200">
+					<Card key={entry.id} className="border-green-200 dark:border-green-800">
 					  <CardContent className="p-6">
 						<div className="flex items-center justify-between">
 						  <div className="space-y-2">
 							<div className="flex items-center space-x-3">
-							  <h3 className="text-lg font-semibold text-blue-900">
+							  <h3 className="text-lg font-semibold text-primary">
 								{entry.sourceWord} → {entry.targetWord}
 							  </h3>
 							  <Badge variant="outline">{entry.category}</Badge>
-							  <Badge variant="secondary" className="bg-green-100 text-green-800">
+							  <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
 								{entry.status}
 							  </Badge>
 							</div>
-							<p className="text-sm text-gray-500">
+							<p className="text-sm text-muted-foreground">
 							  Zatwierdzone: {formatDate(entry.approvedAt)}
 							</p>
 						  </div>
@@ -373,7 +373,7 @@ export default function AdminDashboard() {
 							  <Edit className="h-4 w-4" />
 							</Button>
 							<Button variant="outline" size="sm">
-							  <Trash2 className="h-4 w-4 text-red-600" />
+							  <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
 							</Button>
 						  </div>
 						</div>
