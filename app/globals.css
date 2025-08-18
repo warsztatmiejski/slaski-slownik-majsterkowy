@@ -1,76 +1,128 @@
 @import "tailwindcss";
 
 @theme {
+  /* Typography */
   --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  /* Color palette - using HSL values for better compatibility */
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(222.2 84% 4.9%);
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(222.2 84% 4.9%);
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(222.2 84% 4.9%);
-  --color-primary: hsl(221.2 83.2% 53.3%);
-  --color-primary-foreground: hsl(210 40% 98%);
-  --color-secondary: hsl(210 40% 96%);
-  --color-secondary-foreground: hsl(222.2 84% 4.9%);
-  --color-muted: hsl(210 40% 96%);
-  --color-muted-foreground: hsl(215.4 16.3% 46.9%);
-  --color-accent: hsl(210 40% 96%);
-  --color-accent-foreground: hsl(222.2 84% 4.9%);
-  --color-destructive: hsl(0 84.2% 60.2%);
-  --color-destructive-foreground: hsl(210 40% 98%);
-  --color-border: hsl(214.3 31.8% 91.4%);
-  --color-input: hsl(214.3 31.8% 91.4%);
-  --color-ring: hsl(221.2 83.2% 53.3%);
+  /* Light theme colors using proper OKLCH values */
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.09 0.005 285.82);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.09 0.005 285.82);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.09 0.005 285.82);
+  --color-primary: oklch(0.59 0.22 264.05);
+  --color-primary-foreground: oklch(0.98 0.013 264.89);
+  --color-secondary: oklch(0.96 0.006 286.38);
+  --color-secondary-foreground: oklch(0.09 0.005 285.82);
+  --color-muted: oklch(0.96 0.006 286.38);
+  --color-muted-foreground: oklch(0.46 0.006 285.94);
+  --color-accent: oklch(0.96 0.006 286.38);
+  --color-accent-foreground: oklch(0.09 0.005 285.82);
+  --color-destructive: oklch(0.59 0.22 22.18);
+  --color-destructive-foreground: oklch(0.98 0.013 264.89);
+  --color-border: oklch(0.91 0.006 285.78);
+  --color-input: oklch(0.91 0.006 285.78);
+  --color-ring: oklch(0.59 0.22 264.05);
+
+  /* Additional semantic colors */
+  --color-success: oklch(0.59 0.16 155.11);
+  --color-warning: oklch(0.76 0.15 77.95);
+  --color-info: oklch(0.61 0.15 233.54);
 
   /* Border radius */
   --radius: 0.5rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  /* Shadows with proper opacity */
+  --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 oklch(0 0 0 / 0.1), 0 1px 2px -1px oklch(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px oklch(0 0 0 / 0.1), 0 4px 6px -4px oklch(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px oklch(0 0 0 / 0.1), 0 8px 10px -6px oklch(0 0 0 / 0.1);
 }
 
+/* Dark theme using prefers-color-scheme as per latest docs */
 @media (prefers-color-scheme: dark) {
   @theme {
-	--color-background: hsl(222.2 84% 4.9%);
-	--color-foreground: hsl(210 40% 98%);
-	--color-card: hsl(222.2 84% 4.9%);
-	--color-card-foreground: hsl(210 40% 98%);
-	--color-popover: hsl(222.2 84% 4.9%);
-	--color-popover-foreground: hsl(210 40% 98%);
-	--color-primary: hsl(217.2 91.2% 59.8%);
-	--color-primary-foreground: hsl(222.2 84% 4.9%);
-	--color-secondary: hsl(217.2 32.6% 17.5%);
-	--color-secondary-foreground: hsl(210 40% 98%);
-	--color-muted: hsl(217.2 32.6% 17.5%);
-	--color-muted-foreground: hsl(215 20.2% 65.1%);
-	--color-accent: hsl(217.2 32.6% 17.5%);
-	--color-accent-foreground: hsl(210 40% 98%);
-	--color-destructive: hsl(0 62.8% 30.6%);
-	--color-destructive-foreground: hsl(210 40% 98%);
-	--color-border: hsl(217.2 32.6% 17.5%);
-	--color-input: hsl(217.2 32.6% 17.5%);
-	--color-ring: hsl(224.3 76.3% 94.1%);
+	--color-background: oklch(0.09 0.005 285.82);
+	--color-foreground: oklch(0.98 0.013 264.89);
+	--color-card: oklch(0.09 0.005 285.82);
+	--color-card-foreground: oklch(0.98 0.013 264.89);
+	--color-popover: oklch(0.09 0.005 285.82);
+	--color-popover-foreground: oklch(0.98 0.013 264.89);
+	--color-primary: oklch(0.70 0.19 264.05);
+	--color-primary-foreground: oklch(0.09 0.005 285.82);
+	--color-secondary: oklch(0.15 0.006 285.78);
+	--color-secondary-foreground: oklch(0.98 0.013 264.89);
+	--color-muted: oklch(0.15 0.006 285.78);
+	--color-muted-foreground: oklch(0.65 0.015 285.94);
+	--color-accent: oklch(0.15 0.006 285.78);
+	--color-accent-foreground: oklch(0.98 0.013 264.89);
+	--color-destructive: oklch(0.31 0.15 22.18);
+	--color-destructive-foreground: oklch(0.98 0.013 264.89);
+	--color-border: oklch(0.15 0.006 285.78);
+	--color-input: oklch(0.15 0.006 285.78);
+	--color-ring: oklch(0.84 0.09 264.05);
+
+	/* Dark theme semantic colors */
+	--color-success: oklch(0.45 0.12 155.11);
+	--color-warning: oklch(0.65 0.12 77.95);
+	--color-info: oklch(0.55 0.12 233.54);
   }
 }
 
-/* Custom utility classes for the dictionary */
-.dictionary-search {
-  @apply w-full max-w-2xl mx-auto;
+/* Base styles following v4 patterns */
+@layer base {
+  * {
+	border-color: var(--color-border);
+  }
+
+  body {
+	background-color: var(--color-background);
+	color: var(--color-foreground);
+	font-feature-settings: "rlig" 1, "calt" 1;
+  }
 }
 
-.dictionary-entry {
-  @apply border rounded-lg p-4 hover:shadow-md transition-shadow;
-}
+/* Components layer for reusable patterns */
+@layer components {
+  /* Custom dictionary components */
+  .dictionary-search {
+	@apply w-full max-w-2xl mx-auto;
+  }
 
-.pronunciation {
-  @apply text-sm text-muted-foreground font-mono;
-}
+  .dictionary-entry {
+	@apply border rounded-lg p-4 bg-card text-card-foreground hover:shadow-md transition-shadow;
+  }
 
-.example-sentence {
-  @apply text-sm text-muted-foreground italic;
-}
+  .pronunciation {
+	@apply text-sm text-muted-foreground font-mono;
+  }
 
-/* Highlight search results */
-mark {
-  @apply bg-yellow-200 dark:bg-yellow-800 px-1 rounded;
+  .example-sentence {
+	@apply text-sm text-muted-foreground italic;
+  }
+
+  /* Search result highlighting */
+  mark {
+	@apply bg-yellow-200 dark:bg-yellow-800/30 px-1 rounded text-foreground;
+  }
+
+  /* Enhanced button styles */
+  .btn-primary {
+	@apply bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md font-medium transition-colors;
+  }
+
+  .btn-secondary {
+	@apply bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-md font-medium transition-colors;
+  }
+
+  .btn-outline {
+	@apply border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2 rounded-md font-medium transition-colors;
+  }
 }
