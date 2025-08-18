@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import ThemeScript from './components/theme-script'
 
 export const metadata: Metadata = {
   title: 'Śląski Słownik Majsterkowy',
@@ -12,7 +13,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-	<html lang="pl">
+	<html lang="pl" suppressHydrationWarning>
+	  <head>
+		<ThemeScript />
+	  </head>
 	  <body className="min-h-screen bg-background font-sans antialiased">
 		{children}
 	  </body>

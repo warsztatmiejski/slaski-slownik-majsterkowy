@@ -1,7 +1,4 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import { Search, ExternalLink, Plus, BookOpen } from 'lucide-react'
+import ThemeToggle from './theme-toggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -117,6 +114,7 @@ export default function HomePage() {
 			  </div>
 			</div>
 			<div className="flex items-center space-x-4">
+			  <ThemeToggle />
 			  <Button variant="outline" size="sm" asChild>
 				<a href="https://warsztatmiejski.org" target="_blank" rel="noopener noreferrer">
 				  Warsztat Miejski
