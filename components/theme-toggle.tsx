@@ -7,40 +7,39 @@ import { Button } from '@/components/ui/button'
 type Theme = 'light' | 'dark' | 'system'
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>('system')
+  const [theme, setTheme] = useState<Theme>('light')
   const [mounted, setMounted] = useState(false)
 
-  // Ensure component is mounted before rendering to avoid hydration mismatch
   useEffect(() => {
 	setMounted(true)
 
-	// Get saved theme or default to system
+	// Get saved theme or default to light
 	const savedTheme = localStorage.getItem('theme') as Theme
 	if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
 	  setTheme(savedTheme)
 	  applyTheme(savedTheme)
 	} else {
-	  setTheme('system')
-	  applyTheme('system')
+	  setTheme('light')
+	  applyTheme('light')
 	}
   }, [])
 
   const applyTheme = (newTheme: Theme) => {
-	const root = window.document.documentElement
+	const root = document.documentElement
 
-	// Remove existing theme class
+	// Remove existing dark class
 	root.classList.remove('dark')
 
 	if (newTheme === 'dark') {
 	  root.classList.add('dark')
 	} else if (newTheme === 'system') {
 	  // Use system preference
-	  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-	  if (systemTheme === 'dark') {
+	  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+	  if (systemTheme) {
 		root.classList.add('dark')
 	  }
 	}
-	// Light theme is default (no class needed)
+	// Light theme = no class needed (default)
   }
 
   const handleThemeChange = (newTheme: Theme) => {
@@ -65,47 +64,37 @@ export default function ThemeToggle() {
 	}
   }, [theme])
 
-  // Don't render on server or before hydration
   if (!mounted) {
-	return (
-	  <div className="flex items-center space-x-1">
-		<Button variant="ghost" size="sm" disabled>
-		  <Monitor className="h-4 w-4" />
-		</Button>
-	  </div>
-	)
+	return <div className="w-24 h-8" /> // Placeholder to prevent layout shift
   }
 
   return (
-	<div className="flex items-center space-x-1 rounded-md border border-border p-1">
+	<div className="flex items-center space-x-1 rounded-md border border-border p-1 bg-background">
 	  <Button
 		variant={theme === 'light' ? 'default' : 'ghost'}
 		size="sm"
 		onClick={() => handleThemeChange('light')}
-		className="h-8 w-8 p-0"
-		aria-label="Light theme"
+		className="h-7 w-7 p-0"
 	  >
-		<Sun className="h-4 w-4" />
+		<Sun className="h-3 w-3" />
 	  </Button>
 
 	  <Button
 		variant={theme === 'dark' ? 'default' : 'ghost'}
 		size="sm"
 		onClick={() => handleThemeChange('dark')}
-		className="h-8 w-8 p-0"
-		aria-label="Dark theme"
+		className="h-7 w-7 p-0"
 	  >
-		<Moon className="h-4 w-4" />
+		<Moon className="h-3 w-3" />
 	  </Button>
 
 	  <Button
 		variant={theme === 'system' ? 'default' : 'ghost'}
 		size="sm"
 		onClick={() => handleThemeChange('system')}
-		className="h-8 w-8 p-0"
-		aria-label="System theme"
+		className="h-7 w-7 p-0"
 	  >
-		<Monitor className="h-4 w-4" />
+		<Monitor className="h-3 w-3" />
 	  </Button>
 	</div>
   )
