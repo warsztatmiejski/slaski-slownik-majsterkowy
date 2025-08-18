@@ -230,7 +230,7 @@ export default function HomePage() {
 		{/* Statistics and Featured Content */}
 		<div className="grid md:grid-cols-3 gap-6 mb-12">
 		  {/* Dictionary Stats */}
-		  <Card>
+		  <Card className="stats-card">
 			<CardHeader>
 			  <CardTitle className="text-lg">Słownik w liczbach</CardTitle>
 			</CardHeader>
@@ -239,13 +239,13 @@ export default function HomePage() {
 				<p className="text-3xl font-bold text-blue-600">
 				  {mockStats.totalEntries.toLocaleString()}
 				</p>
-				<p className="text-sm text-gray-600">słów w słowniku</p>
+				<p className="text-sm text-muted-foreground">słów w słowniku</p>
 			  </div>
 			</CardContent>
 		  </Card>
 
 		  {/* Recent Entries */}
-		  <Card>
+		  <Card className="stats-card">
 			<CardHeader>
 			  <CardTitle className="text-lg">Ostatnio dodane</CardTitle>
 			</CardHeader>
@@ -269,7 +269,7 @@ export default function HomePage() {
 		  </Card>
 
 		  {/* Featured Example */}
-		  <Card>
+		  <Card className="stats-card">
 			<CardHeader>
 			  <CardTitle className="text-lg">Przykład dnia</CardTitle>
 			</CardHeader>
@@ -285,7 +285,7 @@ export default function HomePage() {
 				  </button>
 				  , bo muszã zarobic na familijã.
 				</p>
-				<p className="text-gray-700 text-sm">
+				<p className="text-muted-foreground text-sm">
 				  {mockStats.featuredExample.translation}
 				</p>
 			  </div>
@@ -296,7 +296,7 @@ export default function HomePage() {
 		{/* Categories Section */}
 		<div className="grid md:grid-cols-2 gap-6">
 		  {/* Traditional Categories */}
-		  <Card>
+		  <Card className="category-card">
 			<CardHeader>
 			  <CardTitle className="text-xl text-amber-700">Branże tradycyjne</CardTitle>
 			  <CardDescription>
@@ -320,7 +320,7 @@ export default function HomePage() {
 		  </Card>
 
 		  {/* Modern Categories */}
-		  <Card>
+		  <Card className="category-card">
 			<CardHeader>
 			  <CardTitle className="text-xl text-blue-700">Branże nowoczesne</CardTitle>
 			  <CardDescription>

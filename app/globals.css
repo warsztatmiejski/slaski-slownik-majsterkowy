@@ -5,28 +5,28 @@
   --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  /* Light theme colors using proper OKLCH values */
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.09 0.005 285.82);
+  /* Light theme colors - consistent light backgrounds */
+  --color-background: oklch(0.99 0.005 285.82);
+  --color-foreground: oklch(0.15 0.006 285.82);
   --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.09 0.005 285.82);
+  --color-card-foreground: oklch(0.15 0.006 285.82);
   --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.09 0.005 285.82);
+  --color-popover-foreground: oklch(0.15 0.006 285.82);
   --color-primary: oklch(0.59 0.22 264.05);
   --color-primary-foreground: oklch(0.98 0.013 264.89);
   --color-secondary: oklch(0.96 0.006 286.38);
-  --color-secondary-foreground: oklch(0.09 0.005 285.82);
+  --color-secondary-foreground: oklch(0.15 0.006 285.82);
   --color-muted: oklch(0.96 0.006 286.38);
   --color-muted-foreground: oklch(0.46 0.006 285.94);
   --color-accent: oklch(0.96 0.006 286.38);
-  --color-accent-foreground: oklch(0.09 0.005 285.82);
+  --color-accent-foreground: oklch(0.15 0.006 285.82);
   --color-destructive: oklch(0.59 0.22 22.18);
   --color-destructive-foreground: oklch(0.98 0.013 264.89);
   --color-border: oklch(0.91 0.006 285.78);
-  --color-input: oklch(0.91 0.006 285.78);
+  --color-input: oklch(0.94 0.006 285.78);
   --color-ring: oklch(0.59 0.22 264.05);
 
-  /* Additional semantic colors */
+  /* Light theme specific colors */
   --color-success: oklch(0.59 0.16 155.11);
   --color-warning: oklch(0.76 0.15 77.95);
   --color-info: oklch(0.61 0.15 233.54);
@@ -38,7 +38,7 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
-  /* Shadows with proper opacity */
+  /* Shadows for light theme */
   --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.05);
   --shadow: 0 1px 3px 0 oklch(0 0 0 / 0.1), 0 1px 2px -1px oklch(0 0 0 / 0.1);
   --shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1);
@@ -46,27 +46,27 @@
   --shadow-xl: 0 20px 25px -5px oklch(0 0 0 / 0.1), 0 8px 10px -6px oklch(0 0 0 / 0.1);
 }
 
-/* Dark theme using prefers-color-scheme as per latest docs */
+/* Dark theme - only applied when user prefers dark mode */
 @media (prefers-color-scheme: dark) {
   @theme {
 	--color-background: oklch(0.09 0.005 285.82);
 	--color-foreground: oklch(0.98 0.013 264.89);
-	--color-card: oklch(0.09 0.005 285.82);
+	--color-card: oklch(0.11 0.005 285.82);
 	--color-card-foreground: oklch(0.98 0.013 264.89);
-	--color-popover: oklch(0.09 0.005 285.82);
+	--color-popover: oklch(0.11 0.005 285.82);
 	--color-popover-foreground: oklch(0.98 0.013 264.89);
 	--color-primary: oklch(0.70 0.19 264.05);
 	--color-primary-foreground: oklch(0.09 0.005 285.82);
-	--color-secondary: oklch(0.15 0.006 285.78);
+	--color-secondary: oklch(0.16 0.006 285.78);
 	--color-secondary-foreground: oklch(0.98 0.013 264.89);
-	--color-muted: oklch(0.15 0.006 285.78);
+	--color-muted: oklch(0.16 0.006 285.78);
 	--color-muted-foreground: oklch(0.65 0.015 285.94);
-	--color-accent: oklch(0.15 0.006 285.78);
+	--color-accent: oklch(0.16 0.006 285.78);
 	--color-accent-foreground: oklch(0.98 0.013 264.89);
 	--color-destructive: oklch(0.31 0.15 22.18);
 	--color-destructive-foreground: oklch(0.98 0.013 264.89);
-	--color-border: oklch(0.15 0.006 285.78);
-	--color-input: oklch(0.15 0.006 285.78);
+	--color-border: oklch(0.18 0.006 285.78);
+	--color-input: oklch(0.16 0.006 285.78);
 	--color-ring: oklch(0.84 0.09 264.05);
 
 	/* Dark theme semantic colors */
@@ -76,7 +76,7 @@
   }
 }
 
-/* Base styles following v4 patterns */
+/* Base styles */
 @layer base {
   * {
 	border-color: var(--color-border);
@@ -87,11 +87,16 @@
 	color: var(--color-foreground);
 	font-feature-settings: "rlig" 1, "calt" 1;
   }
+
+  /* Ensure consistent light background for main content areas */
+  html {
+	background-color: var(--color-background);
+  }
 }
 
-/* Components layer for reusable patterns */
+/* Components layer - ensuring light theme consistency */
 @layer components {
-  /* Custom dictionary components */
+  /* Dictionary specific components with light theme */
   .dictionary-search {
 	@apply w-full max-w-2xl mx-auto;
   }
@@ -113,16 +118,61 @@
 	@apply bg-yellow-200 dark:bg-yellow-800/30 px-1 rounded text-foreground;
   }
 
-  /* Enhanced button styles */
+  /* Fix for cards to ensure consistent light backgrounds */
+  .card {
+	@apply bg-card text-card-foreground border border-border rounded-lg shadow-sm;
+  }
+
+  .card-header {
+	@apply p-6 pb-0;
+  }
+
+  .card-content {
+	@apply p-6;
+  }
+
+  .card-title {
+	@apply text-lg font-semibold text-card-foreground;
+  }
+
+  .card-description {
+	@apply text-sm text-muted-foreground;
+  }
+
+  /* Button variants with proper theming */
   .btn-primary {
 	@apply bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md font-medium transition-colors;
   }
 
   .btn-secondary {
-	@apply bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-md font-medium transition-colors;
+	@apply bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-md font-medium transition-colors border border-border;
   }
 
   .btn-outline {
 	@apply border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2 rounded-md font-medium transition-colors;
+  }
+
+  /* Specific overrides for homepage cards that were appearing dark */
+  .stats-card,
+  .category-card,
+  .feature-card {
+	@apply bg-card text-card-foreground border border-border rounded-lg p-6 shadow-sm;
+  }
+
+  .stats-card h3,
+  .category-card h3,
+  .feature-card h3 {
+	@apply text-card-foreground font-semibold;
+  }
+
+  .stats-card p,
+  .category-card p,
+  .feature-card p {
+	@apply text-muted-foreground;
+  }
+
+  /* Ensure search bar has proper styling */
+  .search-container {
+	@apply bg-card border border-border rounded-lg p-4 shadow-sm;
   }
 }
