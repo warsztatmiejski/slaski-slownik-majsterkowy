@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import ThemeScript from './components/theme-script'
+import ThemeScript from '@/components/theme-script'
 
 export const metadata: Metadata = {
   title: 'Śląski Słownik Majsterkowy',
