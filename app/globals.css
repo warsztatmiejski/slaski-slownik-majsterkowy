@@ -22,11 +22,11 @@
 	--color-accent-foreground: oklch(0.15 0.006 285.82);
 	--color-destructive: oklch(0.59 0.22 22.18);
 	--color-destructive-foreground: oklch(0.98 0.013 264.89);
-	--color-border: oklch(0.91 0.006 285.78);
+	--color-border: oklch(0.71 0.006 285.78);
 	--color-input: oklch(1 0 0);
 	--color-ring: oklch(0.59 0.22 264.05);
 
-	--radius: 0.5rem;
+	--radius: 0.25rem;
 }
 
 @layer base {
@@ -47,7 +47,7 @@
 		--color-accent-foreground: oklch(0.98 0.013 264.89);
 		--color-destructive: oklch(0.31 0.15 22.18);
 		--color-destructive-foreground: oklch(0.98 0.013 264.89);
-		--color-border: oklch(0.18 0.006 285.78);
+		--color-border: oklch(0.38 0.006 285.78);
 		--color-input: oklch(0.14 0.005 285.82);
 		--color-ring: oklch(0.84 0.09 264.05);
 	}
@@ -60,5 +60,14 @@
 		background-color: var(--color-background);
 		color: var(--color-foreground);
 		font-feature-settings: "rlig" 1, "calt" 1;
+	}
+}
+
+@layer components {
+	.bg-dots {
+		background-color: var(--color-card);
+		background-image: radial-gradient(oklch(0.9 0.07 0) 2px, transparent 0);
+		background-size: 30px 30px;
+		background-position: -5px -5px;
 	}
 }
