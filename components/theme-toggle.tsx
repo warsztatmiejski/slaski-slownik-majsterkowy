@@ -1,101 +1,82 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Sun, Moon, Monitor } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Sun, Moon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-type Theme = 'light' | 'dark' | 'system'
+interface ThemeToggleProps {
+  variant?: 'default' | 'panel'
+}
 
-export default function ThemeToggle() {
+type Theme = 'light' | 'dark'
+
+const PLACEHOLDER_SIZE = 'h-10 w-10'
+
+const baseButtonStyles =
+  'flex items-center justify-center rounded-full border border-slate-900 bg-white/70 text-slate-900 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-slate-100 dark:bg-slate-900/60 dark:text-slate-100'
+const panelButtonStyles =
+  'rounded-2xl w-full px-4 py-3 text-base'
+
+export default function ThemeToggle({ variant = 'default' }: ThemeToggleProps) {
   const [theme, setTheme] = useState<Theme>('light')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-	setMounted(true)
-
-	// Get saved theme or default to light
-	const savedTheme = localStorage.getItem('theme') as Theme
-	if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
+	const root = document.documentElement
+	const savedTheme = localStorage.getItem('theme') as Theme | 'system' | null
+	if (savedTheme === 'light' || savedTheme === 'dark') {
 	  setTheme(savedTheme)
 	  applyTheme(savedTheme)
-	} else {
-	  setTheme('light')
-	  applyTheme('light')
+	  setMounted(true)
+	  return
 	}
+
+	if (savedTheme === 'system') {
+	  localStorage.removeItem('theme')
+	}
+
+	const prefersDark = root.classList.contains('dark') || window.matchMedia('(prefers-color-scheme: dark)').matches
+	const initialTheme: Theme = prefersDark ? 'dark' : 'light'
+	setTheme(initialTheme)
+	applyTheme(initialTheme)
+	localStorage.setItem('theme', initialTheme)
+	setMounted(true)
   }, [])
 
-  const applyTheme = (newTheme: Theme) => {
+  const applyTheme = (nextTheme: Theme) => {
 	const root = document.documentElement
-
-	// Remove existing dark class
-	root.classList.remove('dark')
-
-	if (newTheme === 'dark') {
+	if (nextTheme === 'dark') {
 	  root.classList.add('dark')
-	} else if (newTheme === 'system') {
-	  // Use system preference
-	  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-	  if (systemTheme) {
-		root.classList.add('dark')
-	  }
+	} else {
+	  root.classList.remove('dark')
 	}
-	// Light theme = no class needed (default)
   }
 
-  const handleThemeChange = (newTheme: Theme) => {
-	setTheme(newTheme)
-	localStorage.setItem('theme', newTheme)
-	applyTheme(newTheme)
+  const toggleTheme = () => {
+	const nextTheme: Theme = theme === 'light' ? 'dark' : 'light'
+	setTheme(nextTheme)
+	localStorage.setItem('theme', nextTheme)
+	applyTheme(nextTheme)
   }
-
-  // Listen for system theme changes when in system mode
-  useEffect(() => {
-	if (theme === 'system') {
-	  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-
-	  const handleChange = () => {
-		if (theme === 'system') {
-		  applyTheme('system')
-		}
-	  }
-
-	  mediaQuery.addEventListener('change', handleChange)
-	  return () => mediaQuery.removeEventListener('change', handleChange)
-	}
-  }, [theme])
 
   if (!mounted) {
-	return <div className="w-24 h-8" /> // Placeholder to prevent layout shift
+	return <div className={PLACEHOLDER_SIZE} />
   }
 
+  const Icon = theme === 'light' ? Moon : Sun
+
+  const sizeClasses = variant === 'panel' ? panelButtonStyles : 'h-10 w-10'
+
   return (
-	<div className="flex items-center space-x-1 rounded-md border border-border p-1 bg-background">
-	  <Button
-		variant={theme === 'light' ? 'default' : 'ghost'}
-		size="sm"
-		onClick={() => handleThemeChange('light')}
-		className="h-7 w-7 p-0"
-	  >
-		<Sun className="h-3 w-3" />
-	  </Button>
-
-	  <Button
-		variant={theme === 'dark' ? 'default' : 'ghost'}
-		size="sm"
-		onClick={() => handleThemeChange('dark')}
-		className="h-7 w-7 p-0"
-	  >
-		<Moon className="h-3 w-3" />
-	  </Button>
-
-	  <Button
-		variant={theme === 'system' ? 'default' : 'ghost'}
-		size="sm"
-		onClick={() => handleThemeChange('system')}
-		className="h-7 w-7 p-0"
-	  >
-		<Monitor className="h-3 w-3" />
-	  </Button>
-	</div>
+	<Button
+	  type="button"
+	  variant="ghost"
+	  size={variant === 'panel' ? 'default' : 'icon'}
+	  onClick={toggleTheme}
+	  aria-label={`Przełącz na tryb ${theme === 'light' ? 'ciemny' : 'jasny'}`}
+	  className={`${baseButtonStyles} ${sizeClasses}`}
+	>
+	  <Icon className="h-5 w-5" />
+	</Button>
   )
 }

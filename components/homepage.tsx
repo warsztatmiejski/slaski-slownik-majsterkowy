@@ -31,11 +31,11 @@ interface WordEntry {
   targetWord: string
   sourceLang: 'SILESIAN' | 'POLISH'
   targetLang: 'SILESIAN' | 'POLISH'
-  meanings: { meaning: string; context?: string }[]
-  examples: { sourceText: string; translatedText: string }[]
+  exampleSentences: { sourceText: string; translatedText: string }[]
   pronunciation?: string
   category: string
   partOfSpeech?: string
+  notes?: string
 }
 
 export default function HomePage() {
@@ -60,13 +60,7 @@ export default function HomePage() {
 		targetWord: 'zmiana robocza',
 		sourceLang: 'SILESIAN',
 		targetLang: 'POLISH',
-		meanings: [
-		  {
-			meaning: 'Czas pracy w kopalni, zazwyczaj 8 godzin',
-			context: 'Używane w kontekście organizacji pracy'
-		  }
-		],
-		examples: [
+		exampleSentences: [
 		  {
 			sourceText: 'Idã na šichtã.',
 			translatedText: 'Idę na zmianę.'
@@ -78,7 +72,8 @@ export default function HomePage() {
 		],
 		pronunciation: 'šixta',
 		category: 'Górnictwo',
-		partOfSpeech: 'rzeczownik'
+		partOfSpeech: 'rzeczownik',
+		notes: 'Popularne określenie czasu pracy górników.'
 	  }
 	  setIsSearching(false)
 	  return mockEntry
@@ -194,25 +189,18 @@ export default function HomePage() {
 					</p>
 				  </div>
 
-				  {/* Meanings */}
-				  <div>
-					<h3 className="font-semibold text-lg mb-2 text-foreground">Znaczenie:</h3>
-					{selectedEntry.meanings.map((meaning, index) => (
-					  <div key={index} className="mb-2">
-						<p className="text-foreground">{meaning.meaning}</p>
-						{meaning.context && (
-						  <p className="text-sm text-muted-foreground italic">
-							Kontekst: {meaning.context}
-						  </p>
-						)}
-					  </div>
-					))}
-				  </div>
+          {/* Notes */}
+          {selectedEntry.notes && (
+            <div>
+              <h3 className="font-semibold text-lg mb-2 text-foreground">Notatka:</h3>
+              <p className="text-foreground">{selectedEntry.notes}</p>
+            </div>
+          )}
 
 				  {/* Examples */}
 				  <div>
 					<h3 className="font-semibold text-lg mb-2 text-foreground">Przykłady użycia:</h3>
-					{selectedEntry.examples.map((example, index) => (
+		{selectedEntry.exampleSentences.map((example, index) => (
 					  <div key={index} className="bg-muted p-3 rounded-lg mb-2">
 						<p className="text-primary font-medium">
 						  {example.sourceText}

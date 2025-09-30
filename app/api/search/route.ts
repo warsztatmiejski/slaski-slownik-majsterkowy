@@ -54,9 +54,6 @@ export async function GET(request: NextRequest) {
 	  where: searchConditions,
 	  include: {
 		category: true,
-		meanings: {
-		  orderBy: { order: 'asc' }
-		},
 		exampleSentences: {
 		  orderBy: { order: 'asc' }
 		}
@@ -68,9 +65,24 @@ export async function GET(request: NextRequest) {
 	  ]
 	})
 
+	const results = entries.map(entry => ({
+	  id: entry.id,
+	  sourceWord: entry.sourceWord,
+	  targetWord: entry.targetWord,
+	  sourceLang: entry.sourceLang,
+	  targetLang: entry.targetLang,
+	  pronunciation: entry.pronunciation || undefined,
+	  category: entry.category,
+	  partOfSpeech: entry.partOfSpeech || undefined,
+	  exampleSentences: entry.exampleSentences.map(example => ({
+		sourceText: example.sourceText,
+		translatedText: example.translatedText
+	  })),
+	}))
+
 	return NextResponse.json({
-	  results: entries,
-	  total: entries.length,
+	  results,
+	  total: results.length,
 	  query
 	})
 

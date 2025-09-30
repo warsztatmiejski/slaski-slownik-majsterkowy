@@ -7,7 +7,6 @@ export interface SearchResult {
   targetWord: string
   sourceLang: Language
   targetLang: Language
-  meanings: { meaning: string; context?: string }[]
   exampleSentences: { sourceText: string; translatedText: string }[]
   pronunciation?: string
   category: { name: string; slug: string }
@@ -28,7 +27,6 @@ export interface SubmissionData {
   pronunciation?: string
   categoryId: string
   partOfSpeech?: string
-  meanings: { meaning: string; context?: string }[]
   exampleSentences: { sourceText: string; translatedText: string; context?: string }[]
   submitterName?: string
   submitterEmail?: string
@@ -137,9 +135,8 @@ export class DictionaryAPI {
 		targetWord: 'zmiana robocza',
 		sourceLang: 'SILESIAN',
 		targetLang: 'POLISH',
-		meanings: [{ meaning: 'Czas pracy w kopalni, zazwyczaj 8 godzin' }],
 		exampleSentences: [{ sourceText: 'Idã na šichtã.', translatedText: 'Idę na zmianę.' }],
-		category: { name: 'Górnictwo', slug: 'gornictwo' },
+		category: { name: 'Górnictwo', slug: 'gornictwo' }
 	  },
 	  {
 		id: '2',
@@ -147,9 +144,8 @@ export class DictionaryAPI {
 		targetWord: 'komputer',
 		sourceLang: 'SILESIAN',
 		targetLang: 'POLISH',
-		meanings: [{ meaning: 'Elektroniczna maszyna do przetwarzania danych' }],
 		exampleSentences: [{ sourceText: 'Włōńcz kōmputr.', translatedText: 'Włącz komputer.' }],
-		category: { name: 'Informatyka', slug: 'informatyka' },
+		category: { name: 'Informatyka', slug: 'informatyka' }
 	  },
 	]
   }

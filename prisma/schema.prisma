@@ -33,7 +33,6 @@ model DictionaryEntry {
   alternativeTranslations String[]
 
   // Detailed information
-  meanings        EntryMeaning[]
   exampleSentences ExampleSentence[]
   pronunciation   String?
 
@@ -58,18 +57,6 @@ model DictionaryEntry {
   @@map("dictionary_entries")
 }
 
-model EntryMeaning {
-  id        String @id @default(cuid())
-  meaning   String
-  context   String? // Technical context where this meaning applies
-  order     Int     // For ordering multiple meanings
-
-  entryId   String
-  entry     DictionaryEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
-
-  @@map("entry_meanings")
-}
-
 model ExampleSentence {
   id              String @id @default(cuid())
   sourceText      String
@@ -89,7 +76,6 @@ model PublicSubmission {
   sourceLang      Language
   targetWord      String
   targetLang      Language
-  meanings        String[] // JSON array of meanings
   exampleSentences String[] // JSON array of example sentences
   pronunciation   String?
   categoryId      String

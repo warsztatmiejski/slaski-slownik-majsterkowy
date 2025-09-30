@@ -72,13 +72,6 @@ export async function PATCH(
 			submittedBy: submission.submitterEmail || submission.submitterName,
 			approvedAt: new Date(),
 			approvedBy: adminId,
-			meanings: {
-			  create: submission.meanings.map((meaning, index) => ({
-				meaning,
-				context: '',
-				order: index + 1
-			  }))
-			},
 			exampleSentences: {
 			  create: exampleSentences
 			}

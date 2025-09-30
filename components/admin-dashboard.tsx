@@ -31,7 +31,7 @@ const mockPendingSubmissions = [
 	submittedAt: '2025-01-15T10:30:00Z',
 	submitterName: 'Jan Kowalski',
 	submitterEmail: 'jan@example.com',
-	meanings: ['Koniec zmiany roboczej w kopalni'],
+	notes: 'Popularne określenie zakończenia zmiany w kopalni.',
 	examples: ['Już fajront, idymy do dōmu.']
   },
   {
@@ -44,7 +44,7 @@ const mockPendingSubmissions = [
 	submittedAt: '2025-01-15T14:15:00Z',
 	submitterName: 'Anna Nowak',
 	submitterEmail: 'anna@example.com',
-	meanings: ['Urządzenie sieciowe przekierowujące ruch'],
+	notes: 'Termin sieciowy do słownika nowoczesnych technologii.',
 	examples: ['Skōnfiguruj rutera we do internetu.']
   }
 ]
@@ -217,24 +217,20 @@ export default function AdminDashboard() {
 							  </Badge>
 							</div>
 
-							<div className="grid md:grid-cols-2 gap-4 text-sm">
-							  <div>
-								<p className="font-medium text-foreground">Znaczenia:</p>
-								<ul className="list-disc list-inside text-muted-foreground">
-								  {submission.meanings.map((meaning, index) => (
-									<li key={index}>{meaning}</li>
-								  ))}
-								</ul>
-							  </div>
-							  <div>
-								<p className="font-medium text-foreground">Przykłady:</p>
-								<ul className="list-disc list-inside text-muted-foreground">
-								  {submission.examples.map((example, index) => (
-									<li key={index}>{example}</li>
-								  ))}
-								</ul>
-							  </div>
-							</div>
+						<div className="grid md:grid-cols-2 gap-4 text-sm">
+						  <div>
+							<p className="font-medium text-foreground">Przykłady:</p>
+							<ul className="list-disc list-inside text-muted-foreground">
+							  {submission.examples.map((example, index) => (
+								<li key={index}>{example}</li>
+							  ))}
+							</ul>
+						  </div>
+						  <div>
+							<p className="font-medium text-foreground">Notatki:</p>
+							<p className="text-muted-foreground">{submission.notes || 'Brak dodatkowych informacji'}</p>
+						  </div>
+						</div>
 
 							<div className="text-xs text-muted-foreground">
 							  Zgłoszone przez: {submission.submitterName} ({submission.submitterEmail}) • {formatDate(submission.submittedAt)}

@@ -10,7 +10,6 @@ interface SubmissionData {
   pronunciation?: string
   categoryId: string
   partOfSpeech?: string
-  meanings: { meaning: string; context?: string }[]
   exampleSentences: { sourceText: string; translatedText: string; context?: string }[]
   submitterName?: string
   submitterEmail?: string
@@ -29,9 +28,9 @@ export async function POST(request: NextRequest) {
 	  )
 	}
 
-	if (!data.meanings.length || !data.exampleSentences.length) {
+	if (!data.exampleSentences.length) {
 	  return NextResponse.json(
-		{ error: 'At least one meaning and one example sentence are required' },
+		{ error: 'At least one example sentence is required' },
 		{ status: 400 }
 	  )
 	}
@@ -79,7 +78,6 @@ export async function POST(request: NextRequest) {
 		targetLang: data.targetLang,
 		pronunciation: data.pronunciation?.trim() || null,
 		categoryId: data.categoryId,
-		meanings: data.meanings.map(m => m.meaning),
 		exampleSentences: data.exampleSentences.map(e => `${e.sourceText} | ${e.translatedText}`),
 		submitterName: data.submitterName?.trim() || null,
 		submitterEmail: data.submitterEmail?.trim() || null,
