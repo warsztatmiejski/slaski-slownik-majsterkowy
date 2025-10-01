@@ -11,6 +11,7 @@ export interface SearchResult {
   pronunciation?: string
   category: { name: string; slug: string }
   partOfSpeech?: string
+  notes?: string
 }
 
 export interface SearchResponse {
@@ -31,6 +32,7 @@ export interface SubmissionData {
   submitterName?: string
   submitterEmail?: string
   notes?: string
+  newCategoryName?: string
 }
 
 // API client functions

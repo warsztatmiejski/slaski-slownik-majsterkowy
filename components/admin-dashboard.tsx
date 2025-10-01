@@ -32,7 +32,7 @@ const mockPendingSubmissions = [
 	submitterName: 'Jan Kowalski',
 	submitterEmail: 'jan@example.com',
 	notes: 'Popularne określenie zakończenia zmiany w kopalni.',
-	examples: ['Już fajront, idymy do dōmu.']
+	exampleSentences: ['Już fajront, idymy do dōmu.']
   },
   {
 	id: '2',
@@ -45,7 +45,7 @@ const mockPendingSubmissions = [
 	submitterName: 'Anna Nowak',
 	submitterEmail: 'anna@example.com',
 	notes: 'Termin sieciowy do słownika nowoczesnych technologii.',
-	examples: ['Skōnfiguruj rutera we do internetu.']
+	exampleSentences: ['Skōnfiguruj rutera we do internetu.']
   }
 ]
 
@@ -221,7 +221,7 @@ export default function AdminDashboard() {
 						  <div>
 							<p className="font-medium text-foreground">Przykłady:</p>
 							<ul className="list-disc list-inside text-muted-foreground">
-							  {submission.examples.map((example, index) => (
+							  {submission.exampleSentences.map((example, index) => (
 								<li key={index}>{example}</li>
 							  ))}
 							</ul>

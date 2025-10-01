@@ -14,6 +14,7 @@ interface SubmissionData {
   submitterName?: string
   submitterEmail?: string
   notes?: string
+  newCategoryName?: string
 }
 
 export async function POST(request: NextRequest) {
@@ -81,7 +82,12 @@ export async function POST(request: NextRequest) {
 		exampleSentences: data.exampleSentences.map(e => `${e.sourceText} | ${e.translatedText}`),
 		submitterName: data.submitterName?.trim() || null,
 		submitterEmail: data.submitterEmail?.trim() || null,
-		notes: data.notes?.trim() || null,
+		notes: [
+		  data.notes?.trim(),
+		  data.newCategoryName?.trim() ? `Propozycja nowej kategorii: ${data.newCategoryName.trim()}` : null,
+		]
+		  .filter(Boolean)
+		  .join('\n') || null,
 		status: 'PENDING'
 	  }
 	})

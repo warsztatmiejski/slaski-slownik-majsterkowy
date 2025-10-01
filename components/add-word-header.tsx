@@ -1,4 +1,5 @@
 import Image from 'next/image'
+
 export default function AddWordHeader() {
   return (
 	<div className="flex h-full flex-col gap-12 py-6 md:py-0">
@@ -6,10 +7,10 @@ export default function AddWordHeader() {
 		<Image
 		  src="/ssm.svg"
 		  alt="Śląski Słownik Majsterkowy"
-		  width={400}
-		  height={400}
+		  width={216}
+		  height={200}
 		  priority
-		  className="h-46 w-auto dark:invert md:h-auto md:w-full"
+		  className="h-54 w-auto dark:invert md:h-auto md:w-full"
 		/>
 		<div className="flex flex-col items-end gap-6 md:gap-8">
 		  <a
@@ -23,7 +24,7 @@ export default function AddWordHeader() {
 			  alt="Warsztat Miejski"
 			  width={100}
 			  height={100}
-			  className="w-16 h-auto md:w-26 md:h-auto dark:invert"
+			  className="h-auto w-20 dark:invert md:w-26"
 			/>
 		  </a>
 		  <a
@@ -37,7 +38,7 @@ export default function AddWordHeader() {
 			  alt="Nowe ZPT"
 			  width={100}
 			  height={140}
-			  className="w-16 h-auto md:w-26 md:h-auto dark:invert"
+			  className="h-auto w-20 dark:invert md:w-26"
 			/>
 		  </a>
 		</div>

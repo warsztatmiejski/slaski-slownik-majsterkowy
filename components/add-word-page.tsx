@@ -38,6 +38,8 @@ interface SubmissionForm {
   submitterName: string
   submitterEmail: string
   notes: string
+  newCategoryName: string
+  isSuggestingCategory: boolean
 }
 
 const categories = [
@@ -68,10 +70,10 @@ const languageLabel: Record<'SILESIAN' | 'POLISH', string> = {
 }
 
 const panelFieldStyles =
-  'border border-slate-900 bg-white/80 text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-slate-100 dark:bg-slate-900/60 dark:text-slate-100'
-const inputField = `w-full rounded-full px-6 py-3 text-base ${panelFieldStyles}`
-const textareaField = `w-full min-h-[170px] rounded-3xl px-6 py-4 text-base ${panelFieldStyles}`
-const selectTriggerStyles = `w-full rounded-full px-6 py-3 text-base font-medium text-left ${panelFieldStyles}`
+  'border border-slate-900 bg-white/80 text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] dark:border-slate-100 dark:bg-slate-900/60 dark:text-slate-100'
+const inputField = `w-full rounded-sm px-6 py-3 text-base ${panelFieldStyles}`
+const textareaField = `w-full min-h-[170px] rounded-sm px-6 py-4 text-base ${panelFieldStyles}`
+const selectTriggerStyles = `w-full rounded-sm px-6 py-3 text-base font-medium text-left ${panelFieldStyles}`
 const separatorStyles = 'h-[2px] w-full bg-slate-900 dark:bg-slate-100'
 
 export default function AddWordPage() {
@@ -88,6 +90,8 @@ export default function AddWordPage() {
     submitterName: '',
     submitterEmail: '',
     notes: '',
+    newCategoryName: '',
+    isSuggestingCategory: false,
   })
 
   const [form, setForm] = useState<SubmissionForm>(createInitialForm)
@@ -159,6 +163,19 @@ export default function AddWordPage() {
     setIsSubmitting(true)
 
     try {
+      const suggestedCategoryNote =
+        form.isSuggestingCategory && form.newCategoryName.trim().length > 0
+          ? `Propozycja nowej kategorii: ${form.newCategoryName.trim()}`
+          : null
+      const combinedNotes = [form.notes.trim(), suggestedCategoryNote]
+        .filter(Boolean)
+        .join('\n')
+
+      console.log('Symulated submission payload', {
+        ...form,
+        notes: combinedNotes,
+      })
+
       await new Promise(resolve => setTimeout(resolve, 2000))
       setSubmitSuccess(true)
       setForm(createInitialForm())
@@ -170,8 +187,8 @@ export default function AddWordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-12 px-4 py-12 md:flex-row md:gap-20">
+    <div className="min-h-screen bg-white bg-[url('/bg-hex.png')] bg-top bg-no-repeat text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-12 px-4 py-14 md:flex-row md:gap-20">
         <aside className="md:w-1/3 md:sticky md:top-10">
           <AddWordHeader />
         </aside>
@@ -184,7 +201,8 @@ export default function AddWordPage() {
                 Podziel się terminem, który powinien trafić do Śląskiego Słownika Majsterkowego.
               </p>
             </div>
-            <section className="space-y-6 bg-red-200/25 p-6 md:p-8 dark:bg-red-800/25">
+
+            <section className="space-y-6 p-6 md:p-8 bg-red-200/50 dark:bg-red-900/50">
               <div className="space-y-2">
                 <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Podstawowe informacje</h2>
                 <p className="text-sm text-slate-600 dark:text-slate-300">
@@ -227,9 +245,28 @@ export default function AddWordPage() {
                     className={inputField}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Kategoria</Label>
-                  <Select value={form.categoryId} onValueChange={value => setForm(prev => ({ ...prev, categoryId: value }))}>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="category">Kategoria</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setForm(prev => ({
+                          ...prev,
+                          isSuggestingCategory: !prev.isSuggestingCategory,
+                          newCategoryName: prev.isSuggestingCategory ? '' : prev.newCategoryName,
+                        }))
+                      }
+                    >
+                      {form.isSuggestingCategory ? 'Wybierz istniejącą' : 'Zaproponuj nową'}
+                    </Button>
+                  </div>
+                  <Select
+                    value={form.categoryId}
+                    onValueChange={value => setForm(prev => ({ ...prev, categoryId: value }))}
+                  >
                     <SelectTrigger className={selectTriggerStyles}>
                       <SelectValue placeholder="Wybierz kategorię" />
                     </SelectTrigger>
@@ -257,6 +294,19 @@ export default function AddWordPage() {
                       </div>
                     </SelectContent>
                   </Select>
+                  {form.isSuggestingCategory && (
+                    <Input
+                      value={form.newCategoryName}
+                      onChange={e => setForm(prev => ({ ...prev, newCategoryName: e.target.value }))}
+                      placeholder="Podaj nazwę nowej kategorii"
+                      className={inputField}
+                    />
+                  )}
+                  {form.isSuggestingCategory && (
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                      Wybierz też najbliższą istniejącą kategorię, abyśmy mogli poprawnie przypisać wpis po weryfikacji.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="partOfSpeech">Część mowy</Label>
@@ -278,7 +328,7 @@ export default function AddWordPage() {
 
             <Separator className={separatorStyles} />
 
-            <section className="space-y-6 bg-sky-200/50 p-6 shadow-sm md:p-8 dark:bg-sky-900/50">
+            <section className="space-y-6 p-6 md:p-8 bg-amber-200/50 dark:bg-amber-900/50">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Przykłady użycia</h2>
                 <Button type="button" variant="outline" onClick={addExampleSentence}>
@@ -339,7 +389,7 @@ export default function AddWordPage() {
 
             <Separator className={separatorStyles} />
 
-            <section className="space-y-6 bg-emerald-200/40 p-6 shadow-sm md:p-8 dark:bg-emerald-900/40">
+            <section className="space-y-6 p-6 md:p-8 bg-blue-200/50 dark:bg-blue-900/50">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Zasięg występowania</h2>
                 <Button type="button" variant="outline" size="sm" onClick={addLocation}>
@@ -369,7 +419,7 @@ export default function AddWordPage() {
 
             <Separator className={separatorStyles} />
 
-            <section className="space-y-6 bg-violet-200/40 p-6 shadow-sm md:p-8 dark:bg-violet-900/40">
+            <section className="space-y-6 p-6 md:p-8 bg-slate-200/50 dark:bg-slate-900/50">
               <div className="space-y-2">
                 <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Informacje kontaktowe (opcjonalnie)</h2>
                 <p className="text-sm text-slate-600 dark:text-slate-300">
@@ -438,18 +488,18 @@ export default function AddWordPage() {
         </DialogContent>
       </Dialog>
 
-      <footer className="border-t border-slate-300 bg-white/90 py-8 text-slate-700 transition-colors dark:border-slate-700 dark:bg-slate-950/90 dark:text-slate-200">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-3 max-w-xl">
-            <p>
+      <footer className="border-t border-slate-300 bg-white/90 text-slate-700 transition-colors dark:border-slate-700 dark:bg-slate-950/90 dark:text-slate-200">
+        <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
+          <div className="flex flex-col gap-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+			<ThemeToggle />
+            <p className="max-w-xl">
               Projekt współfinansowany ze środków Ministra Kultury i Dziedzictwa Narodowego w ramach programu dotacyjnego “Różnorodność Językowa” Instytutu Różnorodności Językowej Rzeczypospolitej.
             </p>
-            <div className="flex items-center gap-4">
-              <Image src="/mkdin.svg" alt="Ministerstwo Kultury" width={140} height={48} className="h-12 w-auto dark:invert" />
-              <Image src="/irjr.svg" alt="Instytut Różnorodności Językowej" width={140} height={48} className="h-12 w-auto dark:invert" />
+            <div className="flex items-center gap-10">
+              <Image src="/mkdin.svg" alt="Ministerstwo Kultury" width={140} height={48} className="h-10 w-auto dark:invert" />
+              <Image src="/irjr.svg" alt="Instytut Różnorodności Językowej" width={140} height={48} className="h-10 w-auto dark:invert" />
             </div>
           </div>
-          <ThemeToggle />
         </div>
       </footer>
     </div>

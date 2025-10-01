@@ -13,9 +13,9 @@ type Theme = 'light' | 'dark'
 const PLACEHOLDER_SIZE = 'h-10 w-10'
 
 const baseButtonStyles =
-  'flex items-center justify-center rounded-full border border-slate-900 bg-white/70 text-slate-900 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-slate-100 dark:bg-slate-900/60 dark:text-slate-100'
+  'flex items-center justify-center border border-slate-900 bg-white/80 text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] dark:border-slate-100 dark:bg-slate-900/60 dark:text-slate-100'
 const panelButtonStyles =
-  'rounded-2xl w-full px-4 py-3 text-base'
+  'w-full rounded-full px-6 py-3 text-base'
 
 export default function ThemeToggle({ variant = 'default' }: ThemeToggleProps) {
   const [theme, setTheme] = useState<Theme>('light')
@@ -65,7 +65,7 @@ export default function ThemeToggle({ variant = 'default' }: ThemeToggleProps) {
 
   const Icon = theme === 'light' ? Moon : Sun
 
-  const sizeClasses = variant === 'panel' ? panelButtonStyles : 'h-10 w-10'
+  const sizeClasses = variant === 'panel' ? panelButtonStyles : 'h-10 w-10 rounded-full'
 
   return (
 	<Button
