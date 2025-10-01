@@ -27,6 +27,7 @@ model DictionaryEntry {
   sourceLang      Language
   targetWord      String
   targetLang      Language
+  slug            String?     @unique
   status          EntryStatus @default(PENDING)
 
   // Additional translations for the same word
@@ -35,6 +36,8 @@ model DictionaryEntry {
   // Detailed information
   exampleSentences ExampleSentence[]
   pronunciation   String?
+  partOfSpeech    String?
+  notes           String?
 
   // Categorization
   categoryId      String
@@ -78,6 +81,7 @@ model PublicSubmission {
   targetLang      Language
   exampleSentences String[] // JSON array of example sentences
   pronunciation   String?
+  partOfSpeech    String?
   categoryId      String
 
   // Submitter info

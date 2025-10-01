@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Plus, Edit, Trash2, Check, X, Eye, Settings, Users, BookOpen, Clock } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Check, X, Eye, Settings, BookOpen, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 // Mock data for demonstration
 const mockStats = {
@@ -73,8 +72,6 @@ const mockApprovedEntries = [
 ]
 
 export default function AdminDashboard() {
-  const [selectedSubmission, setSelectedSubmission] = useState(null)
-  const [reviewAction, setReviewAction] = useState('')
   const [reviewNotes, setReviewNotes] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -85,7 +82,6 @@ export default function AdminDashboard() {
 	// Mock success - in real app, update the UI based on API response
 	alert(`Zgłoszenie zostało ${action === 'approve' ? 'zatwierdzone' : 'odrzucone'}`)
 	setReviewNotes('')
-	setSelectedSubmission(null)
   }
 
   const formatDate = (dateString: string) => {

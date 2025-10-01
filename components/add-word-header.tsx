@@ -43,10 +43,6 @@ export default function AddWordHeader() {
 		  </a>
 		</div>
 	  </div>
-
-	  <p className="text-sm uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300">
-		Śląski słownik branżowy rozwijany wspólnie z partnerami lokalnymi.
-	  </p>
 	</div>
   )
 }

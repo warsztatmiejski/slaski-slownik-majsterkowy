@@ -3,15 +3,17 @@ import { Language } from '@prisma/client'
 // Types for API responses
 export interface SearchResult {
   id: string
+  slug: string
   sourceWord: string
   targetWord: string
   sourceLang: Language
   targetLang: Language
-  exampleSentences: { sourceText: string; translatedText: string }[]
+  exampleSentences: { sourceText: string; translatedText: string; context?: string }[]
   pronunciation?: string
-  category: { name: string; slug: string }
+  category: { id: string; name: string; slug: string }
   partOfSpeech?: string
   notes?: string
+  alternativeTranslations: string[]
 }
 
 export interface SearchResponse {
@@ -33,6 +35,42 @@ export interface SubmissionData {
   submitterEmail?: string
   notes?: string
   newCategoryName?: string
+}
+
+export interface RecentEntry {
+  id: string
+  slug: string
+  sourceWord: string
+  targetWord: string
+  sourceLang: Language
+  targetLang: Language
+  pronunciation?: string
+  partOfSpeech?: string
+  notes?: string
+  category: { id: string; name: string; slug: string }
+  exampleSentence: {
+    sourceText: string
+    translatedText: string
+    context?: string
+  } | null
+}
+
+export interface FeaturedEntry {
+  id: string
+  slug: string
+  sourceWord: string
+  targetWord: string
+  sourceLang: Language
+  targetLang: Language
+  pronunciation?: string
+  partOfSpeech?: string
+  notes?: string
+  category: { id: string; name: string; slug: string }
+  exampleSentence: {
+    sourceText: string
+    translatedText: string
+    context?: string
+  } | null
 }
 
 // API client functions
@@ -88,8 +126,10 @@ export class DictionaryAPI {
   }
 
   // Get pending submissions (admin only)
-  static async getPendingSubmissions(): Promise<{ submissions: any[] }> {
-	return this.request('/submissions?status=PENDING')
+  static async getPendingSubmissions(): Promise<{ submissions: unknown[] }> {
+	return this.request<{ submissions: unknown[] }>(
+	  '/submissions?status=PENDING',
+	)
   }
 
   // Review submission (admin only)
@@ -116,56 +156,23 @@ export class DictionaryAPI {
 	approvedToday: number
 	rejectedToday: number
   }> {
-	// This would be a real API call in production
-	// For now, return mock data
-	return {
-	  totalEntries: 1247,
-	  pendingSubmissions: 23,
-	  approvedToday: 8,
-	  rejectedToday: 2,
-	}
+	return this.request('/admin/stats')
   }
 
   // Get recent entries for homepage
-  static async getRecentEntries(limit: number = 5): Promise<SearchResult[]> {
-	// This would be a real API call in production
-	// For now, return mock data
-	return [
-	  {
-		id: '1',
-		sourceWord: 'šichta',
-		targetWord: 'zmiana robocza',
-		sourceLang: 'SILESIAN',
-		targetLang: 'POLISH',
-		exampleSentences: [{ sourceText: 'Idã na šichtã.', translatedText: 'Idę na zmianę.' }],
-		category: { name: 'Górnictwo', slug: 'gornictwo' }
-	  },
-	  {
-		id: '2',
-		sourceWord: 'kōmputr',
-		targetWord: 'komputer',
-		sourceLang: 'SILESIAN',
-		targetLang: 'POLISH',
-		exampleSentences: [{ sourceText: 'Włōńcz kōmputr.', translatedText: 'Włącz komputer.' }],
-		category: { name: 'Informatyka', slug: 'informatyka' }
-	  },
-	]
+  static async getRecentEntries(limit: number = 5): Promise<RecentEntry[]> {
+	const response = await this.request<{ entries: RecentEntry[] }>(
+	  `/dictionary/recent?limit=${Math.max(1, limit)}`,
+	)
+	return response.entries
   }
 
   // Get featured example for homepage
-  static async getFeaturedExample(): Promise<{
-	sentence: string
-	translation: string
-	highlightedWord: string
-	highlightedTranslation: string
-  }> {
-	// This would be a real API call in production
-	return {
-	  sentence: 'Idã na šichtã, bo muszã zarobic na familijã.',
-	  translation: 'Idę na zmianę, bo muszę zarobić na rodzinę.',
-	  highlightedWord: 'šichta',
-	  highlightedTranslation: 'zmiana robocza',
-	}
+  static async getFeaturedExample(): Promise<FeaturedEntry | null> {
+	const response = await this.request<{ entry: FeaturedEntry | null }>(
+	  '/dictionary/featured',
+	)
+	return response.entry
   }
 }
 

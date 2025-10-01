@@ -1,361 +1,707 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Search, ExternalLink, Plus, BookOpen } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { Search, Sparkles, ChevronRight, Loader2, Settings } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
 import ThemeToggle from '@/components/theme-toggle'
+import { Skeleton } from '@/components/ui/skeleton'
+import AddWordHeader from '@/components/add-word-header'
 
-// Mock data - in real app this would come from the database
-const mockStats = {
-  totalEntries: 1247,
-  recentEntries: [
-	{ word: 'šichta', translation: 'zmiana robocza', category: 'Górnictwo' },
-	{ word: 'kōmputr', translation: 'komputer', category: 'Informatyka' },
-	{ word: 'hałda', translation: 'zwał', category: 'Górnictwo' },
-  ],
-  featuredExample: {
-	sentence: 'Idã na šichtã, bo muszã zarobic na familijã.',
-	translation: 'Idę na zmianę, bo muszę zarobić na rodzinę.',
-	highlightedWord: 'šichta',
-	highlightedTranslation: 'zmiana robocza'
-  }
-}
+export type LanguageCode = 'SILESIAN' | 'POLISH'
 
-interface WordEntry {
+export interface EntryPreview {
   id: string
+  slug: string
   sourceWord: string
+  sourceLang: LanguageCode
   targetWord: string
-  sourceLang: 'SILESIAN' | 'POLISH'
-  targetLang: 'SILESIAN' | 'POLISH'
-  exampleSentences: { sourceText: string; translatedText: string }[]
+  targetLang: LanguageCode
   pronunciation?: string
-  category: string
   partOfSpeech?: string
   notes?: string
+  alternativeTranslations: string[]
+  category: {
+    id: string
+    name: string
+    slug: string
+  }
+  exampleSentences: {
+    sourceText: string
+    translatedText: string
+    context?: string
+  }[]
 }
 
-export default function HomePage() {
+export interface HomePageCategory {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  type?: string
+}
+
+export interface HomePageProps {
+  stats: {
+    totalEntries: number
+    pendingSubmissions: number
+    approvedToday: number
+    rejectedToday: number
+  }
+  featuredEntry: EntryPreview | null
+  recentEntries: EntryPreview[]
+  categories: HomePageCategory[]
+}
+
+interface SearchResponse {
+  results: Array<{
+    id: string
+    slug: string
+    sourceWord: string
+    sourceLang: LanguageCode
+    targetWord: string
+    targetLang: LanguageCode
+    pronunciation?: string | null
+    partOfSpeech?: string | null
+    notes?: string | null
+    alternativeTranslations: string[]
+    category: {
+      id: string
+      name: string
+      slug: string
+    }
+    exampleSentences: {
+      sourceText: string
+      translatedText: string
+      context?: string | null
+    }[]
+  }>
+  total: number
+  query: string
+}
+
+const languageLabels: Record<LanguageCode, string> = {
+  SILESIAN: 'śląski',
+  POLISH: 'polski',
+}
+
+const fieldFrame =
+  'border border-slate-900 bg-white/80 text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] dark:border-slate-100 dark:bg-slate-900/60 dark:text-slate-100'
+const inputField = `w-full rounded-sm text-base ${fieldFrame}`
+
+function mapSearchResult(result: SearchResponse['results'][number]): EntryPreview {
+  return {
+    id: result.id,
+    slug: result.slug,
+    sourceWord: result.sourceWord,
+    sourceLang: result.sourceLang,
+    targetWord: result.targetWord,
+    targetLang: result.targetLang,
+    pronunciation: result.pronunciation ?? undefined,
+    partOfSpeech: result.partOfSpeech ?? undefined,
+    notes: result.notes ?? undefined,
+    alternativeTranslations: result.alternativeTranslations ?? [],
+    category: {
+      id: result.category.id,
+      name: result.category.name,
+      slug: result.category.slug,
+    },
+    exampleSentences: result.exampleSentences.map(sentence => ({
+      sourceText: sentence.sourceText,
+      translatedText: sentence.translatedText,
+      context: sentence.context ?? undefined,
+    })),
+  }
+}
+
+function languageDirection(entry: EntryPreview): string {
+  return `${languageLabels[entry.sourceLang]} → ${languageLabels[entry.targetLang]}`
+}
+
+export default function HomePage({
+  stats,
+  featuredEntry,
+  recentEntries,
+  categories,
+}: HomePageProps) {
+  const numberFormatter = useMemo(() => new Intl.NumberFormat('pl-PL'), [])
+
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedEntry, setSelectedEntry] = useState<WordEntry | null>(null)
-  const [isSearching, setIsSearching] = useState(false)
+  const [suggestions, setSuggestions] = useState<EntryPreview[]>([])
+  const [selectedEntry, setSelectedEntry] = useState<EntryPreview | null>(null)
+  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false)
+  const [isEntryLoading, setIsEntryLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [pendingCategoryFetch, setPendingCategoryFetch] = useState<string | null>(null)
 
-  // Mock search function - replace with actual API call
-  const searchDictionary = async (term: string): Promise<WordEntry | null> => {
-	if (!term.trim()) return null
+  const statsItems = useMemo(
+    () => [
+      {
+        label: 'Hasła zatwierdzone',
+        value: numberFormatter.format(stats.totalEntries),
+      },
+      {
+        label: 'Oczekuje na weryfikację',
+        value: numberFormatter.format(stats.pendingSubmissions),
+      },
+      {
+        label: 'Zatwierdzone dzisiaj',
+        value: numberFormatter.format(stats.approvedToday),
+      },
+      {
+        label: 'Odrzucone dzisiaj',
+        value: numberFormatter.format(stats.rejectedToday),
+      },
+    ],
+    [numberFormatter, stats],
+  )
 
-	setIsSearching(true)
+  const randomEntry = useMemo(() => {
+    if (featuredEntry) return featuredEntry
+    if (recentEntries.length > 0) return recentEntries[0]
+    return null
+  }, [featuredEntry, recentEntries])
 
-	// Simulate API delay
-	await new Promise(resolve => setTimeout(resolve, 500))
+  const recentSilesianEntries = useMemo(() => {
+    if (!recentEntries.length) return []
+    const filtered = recentEntries.filter(entry => entry.sourceLang === 'SILESIAN')
+    const base = filtered.length ? filtered : recentEntries
+    return base.slice(0, 9)
+  }, [recentEntries])
 
-	// Mock response for demonstration
-	if (term.toLowerCase().includes('šichta') || term.toLowerCase().includes('zmiana')) {
-	  const mockEntry: WordEntry = {
-		id: 'sample-mining-1',
-		sourceWord: 'šichta',
-		targetWord: 'zmiana robocza',
-		sourceLang: 'SILESIAN',
-		targetLang: 'POLISH',
-		exampleSentences: [
-		  {
-			sourceText: 'Idã na šichtã.',
-			translatedText: 'Idę na zmianę.'
-		  },
-		  {
-			sourceText: 'Kōńczy mi się šichta.',
-			translatedText: 'Kończy mi się zmiana.'
-		  }
-		],
-		pronunciation: 'šixta',
-		category: 'Górnictwo',
-		partOfSpeech: 'rzeczownik',
-		notes: 'Popularne określenie czasu pracy górników.'
-	  }
-	  setIsSearching(false)
-	  return mockEntry
-	}
-
-	setIsSearching(false)
-	return null
+  const updateUrlWithEntry = (entrySlug: string | null) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (entrySlug) {
+      params.set('s', entrySlug)
+    } else {
+      params.delete('s')
+    }
+    const queryString = params.toString()
+    router.replace(`${pathname}${queryString ? `?${queryString}` : ''}`, {
+      scroll: false,
+    })
   }
 
-  const handleSearch = async (e: React.FormEvent) => {
-	e.preventDefault()
-	const result = await searchDictionary(searchTerm)
-	setSelectedEntry(result)
+  const handleSelectEntry = (entry: EntryPreview) => {
+    setSelectedEntry(entry)
+    setSearchTerm(entry.sourceWord)
+    setSuggestions([])
+    setSearchError(null)
+    updateUrlWithEntry(entry.slug)
   }
 
-  const handleWordClick = async (word: string) => {
-	setSearchTerm(word)
-	const result = await searchDictionary(word)
-	setSelectedEntry(result)
+  const handleRecentClick = (entry: EntryPreview) => {
+    setActiveCategory(null)
+    handleSelectEntry(entry)
   }
+
+  const loadSuggestions = useCallback(
+    async ({
+      query,
+      category,
+      signal,
+    }: {
+      query?: string
+      category?: string
+      signal?: AbortSignal
+    }) => {
+      if (!query && !category) {
+        return
+      }
+
+      const params = new URLSearchParams()
+
+    if (query) params.set('q', query)
+    if (category) params.set('category', category)
+    params.set('limit', '8')
+
+    try {
+      setIsFetchingSuggestions(true)
+      const response = await fetch(`/api/search?${params.toString()}`, {
+        signal,
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Błąd wyszukiwania' }))
+        throw new Error(data.error || 'Błąd wyszukiwania')
+      }
+
+      const data = (await response.json()) as SearchResponse
+      const mappedResults = data.results.map(mapSearchResult)
+
+      setSuggestions(mappedResults)
+      setSearchError(mappedResults.length === 0 ? 'Brak wyników' : null)
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        return
+      }
+      console.error('Search failed:', error)
+      if (!signal?.aborted) {
+        setSearchError('Nie udało się pobrać wyników. Spróbuj ponownie później.')
+      }
+    } finally {
+      if (!signal?.aborted) {
+        setIsFetchingSuggestions(false)
+      }
+    }
+  }, [])
+
+  const handleCategoryClick = async (slug: string) => {
+    const nextCategory = activeCategory === slug ? null : slug
+    setActiveCategory(nextCategory)
+    setSearchTerm('')
+    setSuggestions([])
+    setSearchError(null)
+
+    if (nextCategory) {
+      setPendingCategoryFetch(nextCategory)
+      await loadSuggestions({ category: nextCategory })
+      setPendingCategoryFetch(null)
+    }
+  }
+
+  useEffect(() => {
+    const entrySlug = searchParams.get('s')
+
+    if (!entrySlug) {
+      setSelectedEntry(null)
+      return
+    }
+
+    if (selectedEntry && selectedEntry.slug === entrySlug) {
+      return
+    }
+
+    const controller = new AbortController()
+    const fetchEntry = async () => {
+      try {
+        setIsEntryLoading(true)
+        const response = await fetch(`/api/dictionary/${encodeURIComponent(entrySlug)}`, {
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error('Nie znaleziono hasła')
+        }
+
+        const data = (await response.json()) as { entry: EntryPreview }
+        setSelectedEntry(data.entry)
+        setSearchTerm(data.entry.sourceWord)
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Entry fetch failed:', error)
+          setSelectedEntry(null)
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsEntryLoading(false)
+        }
+      }
+    }
+
+    fetchEntry()
+
+    return () => {
+      controller.abort()
+    }
+  }, [searchParams, selectedEntry])
+
+  useEffect(() => {
+    const query = searchTerm.trim()
+
+    if (!query) {
+      if (!activeCategory) {
+        setSuggestions([])
+      }
+      setSearchError(null)
+      return
+    }
+
+    if (selectedEntry && query.toLowerCase() === selectedEntry.sourceWord.toLowerCase()) {
+      setSuggestions([])
+      setSearchError(null)
+      return
+    }
+
+    if (query.length < 2) {
+      setSuggestions([])
+      setSearchError(null)
+      return
+    }
+
+    setActiveCategory(null)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => {
+      loadSuggestions({ query, signal: controller.signal })
+    }, 200)
+
+    return () => {
+      clearTimeout(timeoutId)
+      controller.abort()
+    }
+  }, [searchTerm, selectedEntry, activeCategory, loadSuggestions])
+
+  const handleSuggestionClick = (entry: EntryPreview) => {
+    handleSelectEntry(entry)
+  }
+
+  const handleInputChange = (value: string) => {
+    if (activeCategory) {
+      setActiveCategory(null)
+    }
+    if (selectedEntry && value.toLowerCase() !== selectedEntry.sourceWord.toLowerCase()) {
+      setSelectedEntry(null)
+      updateUrlWithEntry(null)
+    }
+    if (!value.trim()) {
+      updateUrlWithEntry(null)
+    }
+    setSearchTerm(value)
+  }
+
+  const renderExampleSentence = (
+    sentence: EntryPreview['exampleSentences'][number],
+    index: number,
+  ) => (
+    <div
+      key={`${sentence.sourceText}-${index}`}
+      className="rounded-sm border border-slate-900/30 bg-white/70 p-4 text-slate-900 shadow-sm transition-colors dark:border-slate-100/30 dark:bg-slate-900/70 dark:text-slate-100"
+    >
+      <p className="font-medium text-primary">{sentence.sourceText}</p>
+      <p className="text-sm text-slate-700 dark:text-slate-300">
+        {sentence.translatedText}
+      </p>
+      {sentence.context && (
+        <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+          {sentence.context}
+        </p>
+      )}
+    </div>
+  )
 
   return (
-	<div className="min-h-screen bg-background">
-	  {/* Header */}
-	  <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-		<div className="container mx-auto px-4 py-4">
-		  <div className="flex items-center justify-between">
-			<div className="flex items-center space-x-4">
-			  <BookOpen className="h-8 w-8 text-primary" />
-			  <div>
-				<h1 className="text-2xl font-bold text-foreground">
-				  Śląski Słownik Majsterkowy
-				</h1>
-				<p className="text-sm text-muted-foreground">
-				  Techniczny słownik śląsko-polski
-				</p>
-			  </div>
-			</div>
-			<div className="flex items-center space-x-4">
-			  <ThemeToggle />
-			  <Button variant="outline" size="sm" asChild>
-				<a href="https://warsztatmiejski.org" target="_blank" rel="noopener noreferrer">
-				  Warsztat Miejski
-				  <ExternalLink className="ml-2 h-3 w-3" />
-				</a>
-			  </Button>
-			  <Button size="sm" onClick={() => window.location.href = '/dodaj'}>
-				<Plus className="mr-2 h-4 w-4" />
-				Dodaj słowo
-			  </Button>
-			</div>
-		  </div>
-		</div>
-	  </header>
+    <div className="min-h-screen bg-white bg-[url('/bg-hex.png')] bg-top bg-no-repeat text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-12 px-4 py-14 md:flex-row md:gap-20">
+        <aside className="md:w-1/3 md:sticky md:top-10">
+          <div className="flex h-full flex-col gap-10 py-6 md:py-0">
+            <AddWordHeader />
 
-	  <main className="container mx-auto px-4 py-8">
-		{/* Search Section */}
-		<div className="max-w-3xl mx-auto mb-12">
-		  <form onSubmit={handleSearch} className="relative">
-			<div className="relative">
-			  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-			  <Input
-				type="text"
-				value={searchTerm}
-				onChange={(e) => setSearchTerm(e.target.value)}
-				placeholder="Szukaj słów po śląsku lub polsku..."
-				className="pl-10 pr-4 py-4 text-lg border-2 focus:border-primary rounded-lg shadow-sm"
-			  />
-			</div>
-			<Button
-			  type="submit"
-			  className="absolute right-2 top-1/2 transform -translate-y-1/2"
-			  disabled={isSearching}
-			>
-			  {isSearching ? 'Szukam...' : 'Szukaj'}
-			</Button>
-		  </form>
-		</div>
+            {randomEntry && (
+              <div className="space-y-3">
+                <Separator className="h-[2px] w-full bg-slate-900/15 dark:bg-slate-100/15" />
+                <button
+                  type="button"
+                  onClick={() => handleSelectEntry(randomEntry)}
+                  className="w-full text-left"
+                >
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
+                    Wpis dnia
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+                    {randomEntry.sourceWord}
+                  </p>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    {randomEntry.targetWord}
+                  </p>
+                  {randomEntry.exampleSentences[0] && (
+                    <p className="mt-3 text-xs italic text-slate-500 dark:text-slate-400">
+                      „{randomEntry.exampleSentences[0].sourceText}”
+                    </p>
+                  )}
+                </button>
+              </div>
+            )}
 
-		{/* Word Entry Panel */}
-		{selectedEntry && (
-		  <div className="max-w-3xl mx-auto mb-12">
-			<Card className="border-2 border-primary/20 shadow-lg">
-			  <CardHeader>
-				<div className="flex items-start justify-between">
-				  <div>
-					<CardTitle className="text-3xl text-primary">
-					  {selectedEntry.sourceWord}
-					</CardTitle>
-					{selectedEntry.pronunciation && (
-					  <p className="text-sm text-muted-foreground font-mono mt-1">
-						[{selectedEntry.pronunciation}]
-					  </p>
-					)}
-				  </div>
-				  <div className="text-right">
-					<Badge variant="secondary">{selectedEntry.category}</Badge>
-					{selectedEntry.partOfSpeech && (
-					  <p className="text-sm text-muted-foreground mt-1">
-						{selectedEntry.partOfSpeech}
-					  </p>
-					)}
-				  </div>
-				</div>
-			  </CardHeader>
-			  <CardContent>
-				<div className="space-y-6">
-				  {/* Translation */}
-				  <div>
-					<h3 className="font-semibold text-lg mb-2 text-foreground">Tłumaczenie:</h3>
-					<p className="text-xl text-primary font-medium">
-					  {selectedEntry.targetWord}
-					</p>
-				  </div>
-
-          {/* Notes */}
-          {selectedEntry.notes && (
-            <div>
-              <h3 className="font-semibold text-lg mb-2 text-foreground">Notatka:</h3>
-              <p className="text-foreground">{selectedEntry.notes}</p>
+            <div className="space-y-3">
+              <Separator className="h-[1px] w-full bg-slate-900/15 dark:bg-slate-100/15" />
+              <div className="space-y-2 text-xs uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300">
+                {statsItems.map(item => (
+                  <div key={item.label} className="flex justify-between gap-4">
+                    <span>{item.label}</span>
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          )}
+          </div>
+        </aside>
 
-				  {/* Examples */}
-				  <div>
-					<h3 className="font-semibold text-lg mb-2 text-foreground">Przykłady użycia:</h3>
-		{selectedEntry.exampleSentences.map((example, index) => (
-					  <div key={index} className="bg-muted p-3 rounded-lg mb-2">
-						<p className="text-primary font-medium">
-						  {example.sourceText}
-						</p>
-						<p className="text-muted-foreground">
-						  {example.translatedText}
-						</p>
-					  </div>
-					))}
-				  </div>
-				</div>
-			  </CardContent>
-			</Card>
-		  </div>
-		)}
+        <main className="md:w-2/3">
+          <div className="flex flex-col gap-8">
+            <section className="flex flex-col gap-4 md:mt-4 md:flex-row md:items-center md:justify-between">
+              <p className="max-w-xl font-medium text-sm uppercase tracking-[0.18em] text-slate-900 dark:text-slate-100">
+                Techniczny słownik śląsko-polski rozwijany przez społeczność i ekspertów branżowych.
+              </p>
+              <Button asChild>
+                <Link href="/dodaj">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Dodaj nowe słowo
+                </Link>
+              </Button>
+            </section>
 
-		{/* Statistics and Featured Content */}
-		<div className="grid md:grid-cols-3 gap-6 mb-12">
-		  {/* Dictionary Stats */}
-		  <Card>
-			<CardHeader>
-			  <CardTitle className="text-lg">Słownik w liczbach</CardTitle>
-			</CardHeader>
-			<CardContent>
-			  <div className="text-center">
-				<p className="text-3xl font-bold text-primary">
-				  {mockStats.totalEntries.toLocaleString()}
-				</p>
-				<p className="text-sm text-muted-foreground">słów w słowniku</p>
-			  </div>
-			</CardContent>
-		  </Card>
+            <Separator className="h-[2px] bg-slate-900 dark:bg-slate-100" />
 
-		  {/* Recent Entries */}
-		  <Card>
-			<CardHeader>
-			  <CardTitle className="text-lg">Ostatnio dodane</CardTitle>
-			</CardHeader>
-			<CardContent>
-			  <div className="space-y-2">
-				{mockStats.recentEntries.map((entry, index) => (
-				  <div key={index} className="flex justify-between items-center">
-					<button
-					  onClick={() => handleWordClick(entry.word)}
-					  className="text-primary hover:underline font-medium"
-					>
-					  {entry.word}
-					</button>
-					<Badge variant="outline" className="text-xs">
-					  {entry.category}
-					</Badge>
-				  </div>
-				))}
-			  </div>
-			</CardContent>
-		  </Card>
+            <section className="space-y-5 rounded-sm bg-red-200/50 p-6 md:p-8 dark:bg-red-900/40">
+              <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Wyszukaj w słowniku</h2>
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+                  <Input
+                    value={searchTerm}
+                    onChange={event => handleInputChange(event.target.value)}
+                    placeholder="Zacznij wpisywać słowo po śląsku lub po polsku..."
+                    className={`${inputField} h-14 pl-11 text-lg font-semibold tracking-wide`}
+                  />
+                </div>
+                {(suggestions.length > 0 || searchError || isFetchingSuggestions) && (
+                  <div className="max-h-64 overflow-y-auto rounded-md border border-slate-900/20 bg-white/90 shadow-lg dark:border-slate-100/20 dark:bg-slate-900/90">
+                    {isFetchingSuggestions && suggestions.length === 0 && !searchError ? (
+                      <div className="space-y-3 p-4">
+                        <Skeleton className="h-4 w-2/5" />
+                        <Skeleton className="h-4 w-3/5" />
+                        <Skeleton className="h-4 w-1/2" />
+                      </div>
+                    ) : (
+                      suggestions.map(entry => {
+                        const isActive = selectedEntry?.slug === entry.slug
+                        return (
+                          <button
+                            key={entry.id}
+                            type="button"
+                            onMouseDown={event => event.preventDefault()}
+                            onClick={() => handleSuggestionClick(entry)}
+                            className={`flex w-full items-center justify-between border-b border-slate-900/10 px-3 py-2 text-left text-sm transition-colors last:border-b-0 dark:border-slate-100/10 ${
+                              isActive
+                                ? 'bg-primary/10 text-primary'
+                                : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                            }`}
+                          >
+                            <span className="font-medium text-slate-900 dark:text-slate-100">
+                              {entry.sourceWord}
+                            </span>
+                            <span className="text-xs text-slate-500 dark:text-slate-300">
+                              → {entry.targetWord}
+                            </span>
+                          </button>
+                        )
+                      })
+                    )}
+                    {searchError && suggestions.length === 0 && (
+                      <p className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
+                        {searchError}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
 
-		  {/* Featured Example */}
-		  <Card>
-			<CardHeader>
-			  <CardTitle className="text-lg">Przykład dnia</CardTitle>
-			</CardHeader>
-			<CardContent>
-			  <div className="space-y-3">
-				<p className="text-primary font-medium">
-				  Idã na{' '}
-				  <button
-					onClick={() => handleWordClick(mockStats.featuredExample.highlightedWord)}
-					className="bg-yellow-200 dark:bg-yellow-800/30 px-1 rounded hover:bg-yellow-300 dark:hover:bg-yellow-700/40 transition-colors"
-				  >
-					{mockStats.featuredExample.highlightedWord}
-				  </button>
-				  , bo muszã zarobic na familijã.
-				</p>
-				<p className="text-muted-foreground text-sm">
-				  {mockStats.featuredExample.translation}
-				</p>
-			  </div>
-			</CardContent>
-		  </Card>
-		</div>
+              {recentSilesianEntries.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
+                    Ostatnio dodane hasła
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {recentSilesianEntries.map(entry => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        onClick={() => handleRecentClick(entry)}
+                        className={`rounded-sm border px-3 py-2 text-left text-sm transition-colors ${
+                          selectedEntry?.slug === entry.slug
+                            ? 'border-slate-900 bg-white text-slate-900 shadow-sm dark:border-slate-100 dark:bg-slate-900/80 dark:text-slate-100'
+                            : 'border-slate-900/20 bg-white/80 text-slate-900 hover:border-slate-900/60 hover:bg-white dark:border-slate-100/20 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:border-slate-100/40 dark:hover:bg-slate-900/70'
+                        }`}
+                      >
+                        {entry.sourceWord}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
 
-		{/* Categories Section */}
-		<div className="grid md:grid-cols-2 gap-6">
-		  {/* Traditional Categories */}
-		  <Card>
-			<CardHeader>
-			  <CardTitle className="text-xl text-amber-600 dark:text-amber-400">Branże tradycyjne</CardTitle>
-			  <CardDescription>
-				Terminologia śląska z tradycyjnych dziedzin przemysłu
-			  </CardDescription>
-			</CardHeader>
-			<CardContent>
-			  <div className="grid grid-cols-2 gap-3">
-				{['Górnictwo', 'Hutnictwo', 'Inżynieria', 'Produkcja'].map((category) => (
-				  <Button
-					key={category}
-					variant="outline"
-					className="justify-start"
-					onClick={() => window.location.href = `/kategoria/${category.toLowerCase()}`}
-				  >
-					{category}
-				  </Button>
-				))}
-			  </div>
-			</CardContent>
-		  </Card>
+            <Separator className="h-[2px] bg-slate-900 dark:bg-slate-100" />
 
-		  {/* Modern Categories */}
-		  <Card>
-			<CardHeader>
-			  <CardTitle className="text-xl text-blue-600 dark:text-blue-400">Branże nowoczesne</CardTitle>
-			  <CardDescription>
-				Współczesne terminy techniczne po śląsku
-			  </CardDescription>
-			</CardHeader>
-			<CardContent>
-			  <div className="grid grid-cols-2 gap-3">
-				{['Informatyka', 'Elektronika', 'Telekomunikacja'].map((category) => (
-				  <Button
-					key={category}
-					variant="outline"
-					className="justify-start"
-					onClick={() => window.location.href = `/kategoria/${category.toLowerCase()}`}
-				  >
-					{category}
-				  </Button>
-				))}
-			  </div>
-			</CardContent>
-		  </Card>
-		</div>
-	  </main>
+            {(selectedEntry || isEntryLoading) && (
+              <section className="space-y-6 rounded-sm bg-amber-200/50 p-6 md:p-8 dark:bg-amber-900/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Szczegóły hasła</h2>
+                    <p className="text-sm text-slate-700 dark:text-slate-200">
+                      {selectedEntry ? languageDirection(selectedEntry) : 'Ładowanie wpisu...'}
+                    </p>
+                  </div>
+                  {selectedEntry && (
+                    <Badge variant="secondary" className="bg-white/80 text-slate-900 dark:bg-slate-900/80 dark:text-slate-100">
+                      {selectedEntry.category.name}
+                    </Badge>
+                  )}
+                </div>
 
-	  {/* Footer */}
-	  <footer className="border-t bg-muted mt-16">
-		<div className="container mx-auto px-4 py-8">
-		  <div className="text-center text-muted-foreground">
-			<p className="mb-2">
-			  © 2025 Śląski Słownik Majsterkowy - Zachowujemy śląską mowę techniczną
-			</p>
-			<p className="text-sm">
-			  Projekt realizowany przez{' '}
-			  <a
-				href="https://warsztatmiejski.org"
-				className="text-primary hover:underline"
-				target="_blank"
-				rel="noopener noreferrer"
-			  >
-				Warsztat Miejski
-			  </a>
-			</p>
-		  </div>
-		</div>
-	  </footer>
-	</div>
+                {isEntryLoading && !selectedEntry ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-10 w-1/3" />
+                    <Skeleton className="h-5 w-1/4" />
+                    <Skeleton className="h-20 w-full" />
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Skeleton className="h-24 w-full" />
+                      <Skeleton className="h-24 w-full" />
+                    </div>
+                  </div>
+                ) : selectedEntry ? (
+                  <div className="space-y-6">
+                    <div className="flex flex-wrap items-end justify-between gap-4">
+                      <div>
+                        <h3 className="text-4xl font-semibold tracking-wide text-primary">
+                          {selectedEntry.sourceWord}
+                        </h3>
+                        {selectedEntry.pronunciation && (
+                          <p className="text-sm font-mono text-slate-600 dark:text-slate-300">
+                            [{selectedEntry.pronunciation}]
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-1 text-right text-sm text-slate-600 dark:text-slate-300">
+                        {selectedEntry.partOfSpeech && (
+                          <p className="uppercase tracking-[0.18em]">{selectedEntry.partOfSpeech}</p>
+                        )}
+                        <p className="font-semibold text-slate-900 dark:text-slate-100">
+                          {selectedEntry.targetWord}
+                        </p>
+                      </div>
+                    </div>
+
+                    {selectedEntry.alternativeTranslations.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold uppercase tracking-[0.16em]">Alternatywne tłumaczenia</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedEntry.alternativeTranslations.map(translation => (
+                            <Badge key={translation} variant="outline">
+                              {translation}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedEntry.notes && (
+                      <div className="rounded-sm border border-slate-900/20 bg-white/70 p-4 text-sm text-slate-700 shadow-sm dark:border-slate-100/20 dark:bg-slate-900/70 dark:text-slate-200">
+                        {selectedEntry.notes}
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      <p className="text-sm font-semibold uppercase tracking-[0.18em]">Przykłady użycia</p>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {selectedEntry.exampleSentences.map(renderExampleSentence)}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-sm border border-dashed border-slate-900/30 p-6 text-sm text-slate-600 dark:border-slate-100/30 dark:text-slate-300">
+                    Brak wybranego wpisu. Zacznij wpisywać słowo lub wybierz je z listy powyżej.
+                  </div>
+                )}
+              </section>
+            )}
+
+            <Separator className="h-[2px] bg-slate-900 dark:bg-slate-100" />
+
+            <section className="space-y-6 rounded-sm bg-slate-200/50 p-6 md:p-8 dark:bg-slate-900/50">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">
+                    Kategorie tematyczne
+                  </h2>
+                  <p className="text-sm text-slate-700 dark:text-slate-200">
+                    Przeglądaj słownictwo według branży. Kliknij kategorię, aby zobaczyć powiązane hasła.
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {categories.map(category => (
+                  <Button
+                    key={category.id}
+                    variant="outline"
+                    className={`justify-between ${
+                      activeCategory === category.slug
+                        ? 'border-slate-900 bg-white text-slate-900 shadow-sm dark:border-slate-100 dark:bg-slate-900/70 dark:text-slate-100'
+                        : ''
+                    }`}
+                    onClick={() => handleCategoryClick(category.slug)}
+                  >
+                    <span>{category.name}</span>
+                    {pendingCategoryFetch === category.slug ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </section>
+          </div>
+        </main>
+      </div>
+
+      <footer className="border-t border-slate-300 bg-white/90 text-slate-700 transition-colors dark:border-slate-700 dark:bg-slate-950/90 dark:text-slate-200">
+        <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              className="hover:text-primary"
+              aria-label="Panel administratora"
+            >
+              <Link href="/admin">
+                <Settings className="h-5 w-5" />
+              </Link>
+            </Button>
+            <ThemeToggle />
+          </div>
+
+          <div className="flex flex-col gap-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <p className="max-w-xl">
+              Śląski Słownik Majsterkowy chroni fachową terminologię regionu i udostępnia ją kolejnym pokoleniom specjalistów.
+            </p>
+            <div className="flex items-center gap-10">
+              <Image
+                src="/mkdin.svg"
+                alt="Ministerstwo Kultury"
+                width={140}
+                height={48}
+                className="h-10 w-auto dark:invert"
+              />
+              <Image
+                src="/irjr.svg"
+                alt="Instytut Różnorodności Językowej"
+                width={140}
+                height={48}
+                className="h-10 w-auto dark:invert"
+              />
+            </div>
+          </div>
+
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+            © {new Date().getFullYear()} Śląski Słownik Majsterkowy • Współtworzony przez Warsztat Miejski i społeczność regionu
+          </p>
+        </div>
+      </footer>
+    </div>
   )
 }

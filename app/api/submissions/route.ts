@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { Language } from '@prisma/client'
+import { Language, SubmissionStatus } from '@prisma/client'
 
 interface SubmissionData {
   sourceWord: string
@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
 		targetWord: data.targetWord.trim(),
 		targetLang: data.targetLang,
 		pronunciation: data.pronunciation?.trim() || null,
+		partOfSpeech: data.partOfSpeech?.trim() || null,
 		categoryId: data.categoryId,
 		exampleSentences: data.exampleSentences.map(e => `${e.sourceText} | ${e.translatedText}`),
 		submitterName: data.submitterName?.trim() || null,
@@ -110,13 +111,13 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
 	const searchParams = request.nextUrl.searchParams
-	const status = searchParams.get('status')
+	const status = searchParams.get('status') as SubmissionStatus | null
 	const limit = parseInt(searchParams.get('limit') || '50')
 
 	const submissions = await prisma.publicSubmission.findMany({
-	  where: {
-		...(status && { status: status as any })
-	  },
+		  where: {
+			...(status && { status }),
+		  },
 	  orderBy: { createdAt: 'desc' },
 	  take: limit
 	})

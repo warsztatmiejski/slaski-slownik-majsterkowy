@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { EntryStatus, SubmissionStatus } from '@prisma/client'
+import type { PrismaClient } from '@prisma/client'
+import { createSlug } from '@/lib/utils'
+
+async function generateUniqueSlug(base: string, client: PrismaClient = prisma) {
+  const fallback = base || `haslo-${Date.now()}`
+  const baseSlug = createSlug(fallback) || fallback.toLowerCase().replace(/\s+/g, '-')
+  let slug = baseSlug || `haslo-${Date.now()}`
+  let counter = 2
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const existing = await client.dictionaryEntry.findUnique({ where: { slug } })
+    if (!existing) {
+      return slug
+    }
+    slug = `${baseSlug}-${counter}`
+    counter += 1
+  }
+}
 
 interface ReviewData {
   action: 'approve' | 'reject'
@@ -59,6 +78,8 @@ export async function PATCH(
 		  }
 		})
 
+		const slug = await generateUniqueSlug(submission.sourceWord, tx)
+
 		// Create dictionary entry
 		const entry = await tx.dictionaryEntry.create({
 		  data: {
@@ -66,7 +87,10 @@ export async function PATCH(
 			sourceLang: submission.sourceLang,
 			targetWord: submission.targetWord,
 			targetLang: submission.targetLang,
+			slug,
 			pronunciation: submission.pronunciation,
+			partOfSpeech: submission.partOfSpeech,
+			notes: submission.notes,
 			categoryId: submission.categoryId,
 			status: EntryStatus.APPROVED,
 			submittedBy: submission.submitterEmail || submission.submitterName,
