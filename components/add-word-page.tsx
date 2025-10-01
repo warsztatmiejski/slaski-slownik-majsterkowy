@@ -69,11 +69,12 @@ const languageLabel: Record<'SILESIAN' | 'POLISH', string> = {
   POLISH: 'Polski',
 }
 
-const panelFieldStyles =
+const fieldFrame =
   'border border-slate-900 bg-white/80 text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] dark:border-slate-100 dark:bg-slate-900/60 dark:text-slate-100'
-const inputField = `w-full rounded-sm px-6 py-3 text-base ${panelFieldStyles}`
-const textareaField = `w-full min-h-[170px] rounded-sm px-6 py-4 text-base ${panelFieldStyles}`
-const selectTriggerStyles = `w-full rounded-sm px-6 py-3 text-base font-medium text-left ${panelFieldStyles}`
+const inputField = `w-full rounded-sm text-base ${fieldFrame}`
+const wordField = `w-full rounded-sm text-lg font-semibold tracking-wide ${fieldFrame}`
+const textareaField = `w-full min-h-[170px] rounded-sm px-3 py-3 text-base ${fieldFrame}`
+const selectTriggerStyles = `w-full rounded-sm px-3 py-3 text-base font-medium text-left ${fieldFrame}`
 const separatorStyles = 'h-[2px] w-full bg-slate-900 dark:bg-slate-100'
 
 export default function AddWordPage() {
@@ -213,23 +214,25 @@ export default function AddWordPage() {
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold">{languageLabel[form.sourceLang]}</h3>
                   <Input
+                    variant="large"
                     id="sourceWord"
                     value={form.sourceWord}
                     onChange={e => setForm(prev => ({ ...prev, sourceWord: e.target.value }))}
                     placeholder={form.sourceLang === 'SILESIAN' ? 'np. šichta' : 'np. komputer'}
                     required
-                    className={inputField}
+                    className={wordField}
                   />
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold">{languageLabel[form.targetLang]}</h3>
                   <Input
+                    variant="large"
                     id="targetWord"
                     value={form.targetWord}
                     onChange={e => setForm(prev => ({ ...prev, targetWord: e.target.value }))}
                     placeholder={form.targetLang === 'SILESIAN' ? 'np. kōmputr' : 'np. zmiana robocza'}
                     required
-                    className={inputField}
+                    className={wordField}
                   />
                 </div>
               </div>
@@ -241,57 +244,48 @@ export default function AddWordPage() {
                     id="pronunciation"
                     value={form.pronunciation}
                     onChange={e => setForm(prev => ({ ...prev, pronunciation: e.target.value }))}
-                    placeholder="np. šichta"
+                    placeholder="np. szichta"
                     className={inputField}
                   />
                 </div>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="category">Kategoria</Label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
+                  <Label htmlFor="category">Kategoria</Label>
+                  <Select
+                    value={form.isSuggestingCategory ? '__new__' : form.categoryId}
+                    onValueChange={value => {
+                      if (value === '__new__') {
                         setForm(prev => ({
                           ...prev,
-                          isSuggestingCategory: !prev.isSuggestingCategory,
-                          newCategoryName: prev.isSuggestingCategory ? '' : prev.newCategoryName,
+                          isSuggestingCategory: true,
+                          categoryId: '',
+                          newCategoryName: '',
                         }))
+                        return
                       }
-                    >
-                      {form.isSuggestingCategory ? 'Wybierz istniejącą' : 'Zaproponuj nową'}
-                    </Button>
-                  </div>
-                  <Select
-                    value={form.categoryId}
-                    onValueChange={value => setForm(prev => ({ ...prev, categoryId: value }))}
+                      setForm(prev => ({
+                        ...prev,
+                        categoryId: value,
+                        isSuggestingCategory: false,
+                        newCategoryName: prev.newCategoryName,
+                      }))
+                    }}
                   >
                     <SelectTrigger className={selectTriggerStyles}>
                       <SelectValue placeholder="Wybierz kategorię" />
                     </SelectTrigger>
                     <SelectContent>
-                      <div className="p-2">
-                        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Tradycyjne</p>
-                        {categories
-                          .filter(c => c.type === 'traditional')
-                          .map(category => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                      </div>
-                      <Separator />
-                      <div className="p-2">
-                        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Nowoczesne</p>
-                        {categories
-                          .filter(c => c.type === 'modern')
-                          .map(category => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                      </div>
+                      {categories.map(category => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                      <Separator className="my-1" />
+                      <SelectItem value="__new__">
+                        <span className="flex items-center gap-2">
+                          <Plus className="h-4 w-4" />
+                          Dodaj nową...
+                        </span>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   {form.isSuggestingCategory && (
@@ -304,7 +298,7 @@ export default function AddWordPage() {
                   )}
                   {form.isSuggestingCategory && (
                     <p className="text-xs text-slate-600 dark:text-slate-400">
-                      Wybierz też najbliższą istniejącą kategorię, abyśmy mogli poprawnie przypisać wpis po weryfikacji.
+                      Wpis zostanie oznaczony, że proponujesz nową kategorię – podaj jej nazwę powyżej.
                     </p>
                   )}
                 </div>
