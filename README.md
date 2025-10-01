@@ -3,11 +3,11 @@
 Aplikacja webowa rozwijana przez Warsztat Miejski, której celem jest stworzenie specjalistycznego słownika technicznego łączącego język śląski i polski. Projekt udostępnia nowoczesny interfejs do przeszukiwania haseł, gromadzenia nowych zgłoszeń od społeczności oraz moderacji treści przez zespół redakcyjny.
 
 ## Aktualna funkcjonalność
-- interaktywna strona główna z wyszukiwarką haseł, podglądem znaczeń, przykładami użycia i statystykami słownika (obecnie w oparciu o dane przykładowe),
-- rozbudowany formularz zgłaszania nowych słów (`/dodaj`) z dynamicznym dodawaniem znaczeń oraz przykładów wraz z walidacją wymaganych pól,
-- panel administratora (`/admin`) prezentujący statystyki, listę oczekujących zgłoszeń oraz zatwierdzone wpisy – na tę chwilę zasilany danymi makietowymi, ale przygotowany pod integrację z API,
-- warstwa API (`/api/search`, `/api/submissions`, `/api/submissions/[id]`) obsługująca wyszukiwanie w bazie, przyjmowanie zgłoszeń od użytkowników oraz proces akceptacji/odrzucania przez moderatorów,
-- model danych Prisma z kompletnym schematem słownika i możliwością zasiania bazy prawdziwymi hasłami śląsko-polskimi (`prisma/seed.ts`).
+- interaktywna strona główna z wyszukiwarką haseł i panelem prezentującym przykłady użycia (na razie w oparciu o dane mockowe),
+- formularz zgłaszania nowych słów (`/dodaj`) z możliwością dodawania przykładów zdań, lokalizacji, propozycji nowej kategorii i danych kontaktowych (wysyłka jest obecnie symulowana),
+- panel administratora (`/admin`) prezentujący statystyki oraz zgłoszenia w oparciu o dane przykładowe; logika akceptacji/odrzucania jest gotowa do spięcia z API,
+- warstwa API (`/api/search`, `/api/submissions`, `/api/submissions/[id]`) obsługująca wyszukiwanie, przyjmowanie zgłoszeń oraz proces moderacji (wymaga połączenia z bazą),
+- model danych Prisma bez sekcji „znaczeń” – focus na przykładach zdań i metadanych wpisów; seed (`prisma/seed.ts`) uzupełnia bazę realnymi hasłami.
 
 ## Stos technologiczny
 - **Next.js 15 (App Router)** z React 19 oraz TypeScript,
@@ -18,8 +18,8 @@ Aplikacja webowa rozwijana przez Warsztat Miejski, której celem jest stworzenie
 
 ## Uruchomienie lokalne
 1. Zainstaluj zależności: `npm install`.
-2. Skonfiguruj zmienną `DATABASE_URL` (PostgreSQL) w pliku `.env`.
-3. Wygeneruj klienta ORM i zaktualizuj schemat: `npm run db:push` (opcjonalnie `npm run db:seed` dla danych przykładowych).
+2. Skonfiguruj zmienną `DATABASE_URL` (PostgreSQL) w pliku `.env`. W przypadku hostingu MyDevil wymagane jest tunelowanie SSH lub shadow baza – patrz [dokumentacja Prisma](https://pris.ly/d/migrate-shadow).
+3. Wygeneruj klienta ORM i zaktualizuj schemat: `npx prisma migrate dev` / `npm run db:push` (opcjonalnie `npm run db:seed` dla danych przykładowych).
 4. Uruchom aplikację: `npm run dev` i odwiedź `http://localhost:3000`.
 
 ## Struktura projektu
