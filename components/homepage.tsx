@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -13,6 +13,15 @@ import { Badge } from '@/components/ui/badge'
 import ThemeToggle from '@/components/theme-toggle'
 import { Skeleton } from '@/components/ui/skeleton'
 import AddWordHeader from '@/components/add-word-header'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 
 export type LanguageCode = 'SILESIAN' | 'POLISH'
 
@@ -57,6 +66,10 @@ export interface HomePageProps {
   featuredEntry: EntryPreview | null
   recentEntries: EntryPreview[]
   categories: HomePageCategory[]
+  adminCredentials?: {
+    email: string
+    password: string
+  }
 }
 
 interface SearchResponse {
@@ -129,8 +142,8 @@ export default function HomePage({
   featuredEntry,
   recentEntries,
   categories,
+  adminCredentials,
 }: HomePageProps) {
-  const numberFormatter = useMemo(() => new Intl.NumberFormat('pl-PL'), [])
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -144,28 +157,11 @@ export default function HomePage({
   const [searchError, setSearchError] = useState<string | null>(null)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [pendingCategoryFetch, setPendingCategoryFetch] = useState<string | null>(null)
-
-  const statsItems = useMemo(
-    () => [
-      {
-        label: 'Hasła zatwierdzone',
-        value: numberFormatter.format(stats.totalEntries),
-      },
-      {
-        label: 'Oczekuje na weryfikację',
-        value: numberFormatter.format(stats.pendingSubmissions),
-      },
-      {
-        label: 'Zatwierdzone dzisiaj',
-        value: numberFormatter.format(stats.approvedToday),
-      },
-      {
-        label: 'Odrzucone dzisiaj',
-        value: numberFormatter.format(stats.rejectedToday),
-      },
-    ],
-    [numberFormatter, stats],
-  )
+  const [categoryEntries, setCategoryEntries] = useState<EntryPreview[]>([])
+  const [categoryError, setCategoryError] = useState<string | null>(null)
+  const [isFetchingCategory, setIsFetchingCategory] = useState(false)
+  const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false)
+  const lastCategorySlugRef = useRef<string | null>(null)
 
   const randomEntry = useMemo(() => {
     if (featuredEntry) return featuredEntry
@@ -180,10 +176,24 @@ export default function HomePage({
     return base.slice(0, 9)
   }, [recentEntries])
 
+  const activeCategoryData = useMemo(
+    () => categories.find(category => category.slug === activeCategory) || null,
+    [categories, activeCategory],
+  )
+
+  useEffect(() => {
+    if (!activeCategory) {
+      setCategoryEntries([])
+      setCategoryError(null)
+      setIsFetchingCategory(false)
+    }
+  }, [activeCategory])
+
   const updateUrlWithEntry = (entrySlug: string | null) => {
     const params = new URLSearchParams(searchParams.toString())
     if (entrySlug) {
       params.set('s', entrySlug)
+      params.delete('k')
     } else {
       params.delete('s')
     }
@@ -193,28 +203,41 @@ export default function HomePage({
     })
   }
 
+  const updateUrlWithCategory = (categorySlug: string | null) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (categorySlug) {
+      params.set('k', categorySlug)
+      params.delete('s')
+    } else {
+      params.delete('k')
+    }
+    const queryString = params.toString()
+    router.replace(`${pathname}${queryString ? `?${queryString}` : ''}`, {
+      scroll: false,
+    })
+  }
+
   const handleSelectEntry = (entry: EntryPreview) => {
+    setActiveCategory(null)
     setSelectedEntry(entry)
-    setSearchTerm(entry.sourceWord)
     setSuggestions([])
     setSearchError(null)
+    setCategoryEntries([])
+    setCategoryError(null)
+    updateUrlWithCategory(null)
     updateUrlWithEntry(entry.slug)
   }
 
   const handleRecentClick = (entry: EntryPreview) => {
-    setActiveCategory(null)
     handleSelectEntry(entry)
   }
 
   const loadSuggestions = useCallback(
-    async ({
-      query,
-      category,
-      signal,
-    }: {
+    async ({ query, category, signal, mode = 'search' }: {
       query?: string
       category?: string
       signal?: AbortSignal
+      mode?: 'search' | 'category'
     }) => {
       if (!query && !category) {
         return
@@ -222,52 +245,79 @@ export default function HomePage({
 
       const params = new URLSearchParams()
 
-    if (query) params.set('q', query)
-    if (category) params.set('category', category)
-    params.set('limit', '8')
+      if (query) params.set('q', query)
+      if (category) params.set('category', category)
+      params.set('limit', mode === 'category' ? '24' : '8')
 
-    try {
-      setIsFetchingSuggestions(true)
-      const response = await fetch(`/api/search?${params.toString()}`, {
-        signal,
-      })
+      try {
+        if (mode === 'search') {
+          setIsFetchingSuggestions(true)
+        } else {
+          setIsFetchingCategory(true)
+        }
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'Błąd wyszukiwania' }))
-        throw new Error(data.error || 'Błąd wyszukiwania')
+        const response = await fetch(`/api/search?${params.toString()}`, { signal })
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({ error: 'Błąd wyszukiwania' }))
+          throw new Error(data.error || 'Błąd wyszukiwania')
+        }
+
+        const data = (await response.json()) as SearchResponse
+        const mappedResults = data.results.map(mapSearchResult)
+
+        if (mode === 'search') {
+          setSuggestions(mappedResults)
+          setSearchError(mappedResults.length === 0 ? 'Brak wyników' : null)
+        } else {
+          setCategoryEntries(mappedResults)
+          setCategoryError(mappedResults.length === 0 ? 'Brak haseł w tej kategorii' : null)
+        }
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') {
+          return
+        }
+        console.error('Search failed:', error)
+        if (!signal?.aborted) {
+          if (mode === 'search') {
+            setSearchError('Nie udało się pobrać wyników. Spróbuj ponownie później.')
+          } else {
+            setCategoryError('Nie udało się pobrać haseł dla tej kategorii.')
+          }
+        }
+      } finally {
+        if (!signal?.aborted) {
+          if (mode === 'search') {
+            setIsFetchingSuggestions(false)
+          } else {
+            setIsFetchingCategory(false)
+          }
+        }
       }
+    },
+  [])
 
-      const data = (await response.json()) as SearchResponse
-      const mappedResults = data.results.map(mapSearchResult)
-
-      setSuggestions(mappedResults)
-      setSearchError(mappedResults.length === 0 ? 'Brak wyników' : null)
-    } catch (error) {
-      if ((error as Error).name === 'AbortError') {
-        return
-      }
-      console.error('Search failed:', error)
-      if (!signal?.aborted) {
-        setSearchError('Nie udało się pobrać wyników. Spróbuj ponownie później.')
-      }
-    } finally {
-      if (!signal?.aborted) {
-        setIsFetchingSuggestions(false)
-      }
-    }
-  }, [])
-
-  const handleCategoryClick = async (slug: string) => {
+  const handleCategoryClick = (slug: string) => {
     const nextCategory = activeCategory === slug ? null : slug
-    setActiveCategory(nextCategory)
-    setSearchTerm('')
-    setSuggestions([])
-    setSearchError(null)
 
     if (nextCategory) {
+      setActiveCategory(nextCategory)
+      setSearchTerm('')
+      setSuggestions([])
+      setSearchError(null)
+      setCategoryError(null)
+      setIsFetchingSuggestions(false)
+      setSelectedEntry(null)
+      setCategoryEntries([])
       setPendingCategoryFetch(nextCategory)
-      await loadSuggestions({ category: nextCategory })
+      updateUrlWithCategory(nextCategory)
+    } else {
+      setActiveCategory(null)
       setPendingCategoryFetch(null)
+      setCategoryEntries([])
+      setCategoryError(null)
+      setIsFetchingCategory(false)
+      updateUrlWithCategory(null)
     }
   }
 
@@ -297,7 +347,7 @@ export default function HomePage({
 
         const data = (await response.json()) as { entry: EntryPreview }
         setSelectedEntry(data.entry)
-        setSearchTerm(data.entry.sourceWord)
+        setSuggestions([])
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
           console.error('Entry fetch failed:', error)
@@ -316,6 +366,44 @@ export default function HomePage({
       controller.abort()
     }
   }, [searchParams, selectedEntry])
+  useEffect(() => {
+    const categorySlug = searchParams.get('k')
+
+    if (!categorySlug) {
+      lastCategorySlugRef.current = null
+      setActiveCategory(prev => (prev !== null ? null : prev))
+      setCategoryEntries([])
+      setCategoryError(null)
+      setIsFetchingCategory(false)
+      setPendingCategoryFetch(null)
+      return
+    }
+
+    if (lastCategorySlugRef.current === categorySlug) {
+      return
+    }
+
+    lastCategorySlugRef.current = categorySlug
+    const controller = new AbortController()
+
+    setActiveCategory(prev => (prev === categorySlug ? prev : categorySlug))
+    setSearchTerm('')
+    setSuggestions([])
+    setSearchError(null)
+    setSelectedEntry(null)
+    setIsFetchingSuggestions(false)
+    setCategoryEntries([])
+    setCategoryError(null)
+    setPendingCategoryFetch(categorySlug)
+
+    loadSuggestions({ category: categorySlug, signal: controller.signal, mode: 'category' })
+      .finally(() => {
+        setPendingCategoryFetch(prev => (prev === categorySlug ? null : prev))
+      })
+
+    return () => controller.abort()
+  }, [searchParams, loadSuggestions])
+
 
   useEffect(() => {
     const query = searchTerm.trim()
@@ -325,25 +413,28 @@ export default function HomePage({
         setSuggestions([])
       }
       setSearchError(null)
+      setIsFetchingSuggestions(false)
       return
     }
 
     if (selectedEntry && query.toLowerCase() === selectedEntry.sourceWord.toLowerCase()) {
       setSuggestions([])
       setSearchError(null)
+      setIsFetchingSuggestions(false)
       return
     }
 
     if (query.length < 2) {
       setSuggestions([])
       setSearchError(null)
+      setIsFetchingSuggestions(false)
       return
     }
 
     setActiveCategory(null)
     const controller = new AbortController()
     const timeoutId = setTimeout(() => {
-      loadSuggestions({ query, signal: controller.signal })
+      loadSuggestions({ query, signal: controller.signal, mode: 'search' })
     }, 200)
 
     return () => {
@@ -359,6 +450,7 @@ export default function HomePage({
   const handleInputChange = (value: string) => {
     if (activeCategory) {
       setActiveCategory(null)
+      updateUrlWithCategory(null)
     }
     if (selectedEntry && value.toLowerCase() !== selectedEntry.sourceWord.toLowerCase()) {
       setSelectedEntry(null)
@@ -366,6 +458,10 @@ export default function HomePage({
     }
     if (!value.trim()) {
       updateUrlWithEntry(null)
+      setSelectedEntry(null)
+      setCategoryEntries([])
+      setCategoryError(null)
+      setIsFetchingCategory(false)
     }
     setSearchTerm(value)
   }
@@ -398,51 +494,59 @@ export default function HomePage({
             <AddWordHeader />
 
             {randomEntry && (
-              <div className="space-y-3">
-                <Separator className="h-[2px] w-full bg-slate-900/15 dark:bg-slate-100/15" />
+              <div className="space-y-3 pt-6">
+                
                 <button
                   type="button"
                   onClick={() => handleSelectEntry(randomEntry)}
-                  className="w-full text-left"
+                  className="w-full cursor-pointer space-y-2 border-b-2 border-slate-900 pb-3 text-left transition-colors hover:text-primary dark:border-slate-100"
                 >
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
-                    Wpis dnia
+                  <p className="text-xl font-medium text-slate-900 dark:text-slate-100">
+                    Czy wiesz co po śląsku znaczy
                   </p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-                    {randomEntry.sourceWord}
+                  <p className="text-4xl font-bold text-slate-900 dark:text-slate-100">
+                    {randomEntry.sourceWord}?
                   </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">
-                    {randomEntry.targetWord}
+                  <p className="text-right text-sm font-semibold text-primary">
+                    Sprawdź →
                   </p>
-                  {randomEntry.exampleSentences[0] && (
-                    <p className="mt-3 text-xs italic text-slate-500 dark:text-slate-400">
-                      „{randomEntry.exampleSentences[0].sourceText}”
-                    </p>
-                  )}
                 </button>
               </div>
             )}
 
             <div className="space-y-3">
-              <Separator className="h-[1px] w-full bg-slate-900/15 dark:bg-slate-100/15" />
-              <div className="space-y-2 text-xs uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300">
-                {statsItems.map(item => (
-                  <div key={item.label} className="flex justify-between gap-4">
-                    <span>{item.label}</span>
-                    <span className="font-semibold text-slate-900 dark:text-slate-100">
-                      {item.value}
-                    </span>
-                  </div>
+              <nav
+                className="space-y-2 text-sm text-slate-900 dark:text-slate-100"
+                aria-label={`Kategorie (${stats.totalEntries.toLocaleString('pl-PL')} haseł)`}
+              >
+                {categories.map(category => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => handleCategoryClick(category.slug)}
+                    className={`flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left transition-colors ${
+                      activeCategory === category.slug
+                        ? 'bg-primary/10 text-primary'
+                        : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <span>{category.name}</span>
+                    {pendingCategoryFetch === category.slug ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </button>
                 ))}
-              </div>
-            </div>
+              </nav>
+                          </div>
           </div>
         </aside>
 
         <main className="md:w-2/3">
           <div className="flex flex-col gap-8">
             <section className="flex flex-col gap-4 md:mt-4 md:flex-row md:items-center md:justify-between">
-              <p className="max-w-xl font-medium text-sm uppercase tracking-[0.18em] text-slate-900 dark:text-slate-100">
+              <p className="max-w-xl font-bold text-lg text-slate-900 dark:text-slate-100">
                 Techniczny słownik śląsko-polski rozwijany przez społeczność i ekspertów branżowych.
               </p>
               <Button asChild>
@@ -466,6 +570,9 @@ export default function HomePage({
                     placeholder="Zacznij wpisywać słowo po śląsku lub po polsku..."
                     className={`${inputField} h-14 pl-11 text-lg font-semibold tracking-wide`}
                   />
+                  {isFetchingSuggestions && (
+                    <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-500" />
+                  )}
                 </div>
                 {(suggestions.length > 0 || searchError || isFetchingSuggestions) && (
                   <div className="max-h-64 overflow-y-auto rounded-md border border-slate-900/20 bg-white/90 shadow-lg dark:border-slate-100/20 dark:bg-slate-900/90">
@@ -491,7 +598,7 @@ export default function HomePage({
                             }`}
                           >
                             <span className="font-medium text-slate-900 dark:text-slate-100">
-                              {entry.sourceWord}
+                              <span className="inline-block border-b-2 border-slate-900/30 pb-1 transition-colors dark:border-slate-100/30">{entry.sourceWord}</span>
                             </span>
                             <span className="text-xs text-slate-500 dark:text-slate-300">
                               → {entry.targetWord}
@@ -514,19 +621,18 @@ export default function HomePage({
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
                     Ostatnio dodane hasła
                   </p>
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {recentSilesianEntries.map(entry => (
                       <button
                         key={entry.id}
                         type="button"
                         onClick={() => handleRecentClick(entry)}
-                        className={`rounded-sm border px-3 py-2 text-left text-sm transition-colors ${
-                          selectedEntry?.slug === entry.slug
-                            ? 'border-slate-900 bg-white text-slate-900 shadow-sm dark:border-slate-100 dark:bg-slate-900/80 dark:text-slate-100'
-                            : 'border-slate-900/20 bg-white/80 text-slate-900 hover:border-slate-900/60 hover:bg-white dark:border-slate-100/20 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:border-slate-100/40 dark:hover:bg-slate-900/70'
-                        }`}
+                        className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 dark:border-slate-100 transition-colorsdark:text-slate-100 hover:text-primary hover:border-primary"
                       >
-                        {entry.sourceWord}
+                        <span className="inline-block pb-1 transition-colors ">
+                          {entry.sourceWord}
+                        </span>
+                        <ChevronRight className="h-4 w-4" />
                       </button>
                     ))}
                   </div>
@@ -536,7 +642,7 @@ export default function HomePage({
 
             <Separator className="h-[2px] bg-slate-900 dark:bg-slate-100" />
 
-            {(selectedEntry || isEntryLoading) && (
+            {!activeCategory && (selectedEntry || isEntryLoading) && (
               <section className="space-y-6 rounded-sm bg-amber-200/50 p-6 md:p-8 dark:bg-amber-900/50">
                 <div className="flex items-center justify-between">
                   <div>
@@ -619,58 +725,108 @@ export default function HomePage({
               </section>
             )}
 
-            <Separator className="h-[2px] bg-slate-900 dark:bg-slate-100" />
-
-            <section className="space-y-6 rounded-sm bg-slate-200/50 p-6 md:p-8 dark:bg-slate-900/50">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">
-                    Kategorie tematyczne
-                  </h2>
-                  <p className="text-sm text-slate-700 dark:text-slate-200">
-                    Przeglądaj słownictwo według branży. Kliknij kategorię, aby zobaczyć powiązane hasła.
-                  </p>
+            {activeCategory && (
+              <section className="space-y-4 rounded-sm bg-slate-200/50 p-6 md:p-8 dark:bg-slate-900/50">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">
+                      Hasła w kategorii {activeCategoryData ? activeCategoryData.name : activeCategory}
+                    </h2>
                 </div>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {categories.map(category => (
-                  <Button
-                    key={category.id}
-                    variant="outline"
-                    className={`justify-between ${
-                      activeCategory === category.slug
-                        ? 'border-slate-900 bg-white text-slate-900 shadow-sm dark:border-slate-100 dark:bg-slate-900/70 dark:text-slate-100'
-                        : ''
-                    }`}
-                    onClick={() => handleCategoryClick(category.slug)}
-                  >
-                    <span>{category.name}</span>
-                    {pendingCategoryFetch === category.slug ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </Button>
-                ))}
-              </div>
-            </section>
+                {isFetchingCategory && categoryEntries.length === 0 ? (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <Skeleton key={index} className="h-8 w-full" />
+                    ))}
+                  </div>
+                ) : categoryEntries.length > 0 ? (
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {categoryEntries.map(entry => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        onClick={() => handleSelectEntry(entry)}
+                        className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 dark:border-slate-100 transition-colorsdark:text-slate-100 hover:text-primary hover:border-primary"
+                      >
+                        <span className="inline-block pb-1 transition-colors">
+                          {entry.sourceWord}
+                        </span>
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    {categoryError ?? 'Brak haseł w wybranej kategorii.'}
+                  </p>
+                )}
+              </section>
+            )}
+
           </div>
         </main>
       </div>
+
+      <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Panel administratora</DialogTitle>
+            <DialogDescription>
+              Użyj poniższych danych, aby zalogować się do panelu moderacji.
+            </DialogDescription>
+          </DialogHeader>
+          {adminCredentials ? (
+            <div className="space-y-4 py-2">
+              <div className="space-y-1">
+                <Label htmlFor="admin-email">Adres e-mail</Label>
+                <Input
+                  id="admin-email"
+                  value={adminCredentials.email}
+                  readOnly
+                  className="border-slate-300 dark:border-slate-700"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="admin-password">Hasło</Label>
+                <Input
+                  id="admin-password"
+                  type="password"
+                  value={adminCredentials.password}
+                  readOnly
+                  className="border-slate-300 dark:border-slate-700"
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="py-4 text-sm text-slate-600 dark:text-slate-300">
+              Brak zdefiniowanych danych logowania. Uzupełnij zmienne środowiskowe
+              <code className="mx-1 rounded bg-slate-200 px-1 py-0.5 text-xs dark:bg-slate-800">ADMIN_EMAIL</code>
+              i
+              <code className="mx-1 rounded bg-slate-200 px-1 py-0.5 text-xs dark:bg-slate-800">ADMIN_PASSWORD</code>.
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAdminDialogOpen(false)}>
+              Zamknij
+            </Button>
+            <Button asChild>
+              <Link href="/admin">Przejdź do panelu</Link>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <footer className="border-t border-slate-300 bg-white/90 text-slate-700 transition-colors dark:border-slate-700 dark:bg-slate-950/90 dark:text-slate-200">
         <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
           <div className="flex items-center gap-3">
             <Button
+              type="button"
               variant="ghost"
               size="icon"
-              asChild
-              className="hover:text-primary"
               aria-label="Panel administratora"
+              onClick={() => setIsAdminDialogOpen(true)}
+              className="h-10 w-10 rounded-full border border-slate-900 bg-white/80 text-slate-900 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] dark:border-slate-100 dark:bg-slate-900/60 dark:text-slate-100"
             >
-              <Link href="/admin">
-                <Settings className="h-5 w-5" />
-              </Link>
+              <Settings className="h-5 w-5" />
             </Button>
             <ThemeToggle />
           </div>

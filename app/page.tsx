@@ -158,6 +158,14 @@ export default async function Page() {
     type: category.type,
   }))
 
+  const adminCredentials =
+    process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD
+      ? {
+          email: process.env.ADMIN_EMAIL,
+          password: process.env.ADMIN_PASSWORD,
+        }
+      : undefined
+
   const props: HomePageProps = {
     stats: {
       totalEntries,
@@ -168,6 +176,7 @@ export default async function Page() {
     featuredEntry,
     recentEntries,
     categories: categoryList,
+    adminCredentials,
   }
 
   return <HomePage {...props} />

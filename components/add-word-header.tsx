@@ -14,20 +14,6 @@ export default function AddWordHeader() {
 		/>
 		<div className="flex flex-col items-end gap-6 md:gap-8">
 		  <a
-			href="https://warsztatmiejski.org"
-			target="_blank"
-			rel="noopener noreferrer"
-			className="transition-opacity hover:opacity-80"
-		  >
-			<Image
-			  src="/wm-symbol.svg"
-			  alt="Warsztat Miejski"
-			  width={100}
-			  height={100}
-			  className="h-auto w-20 dark:invert md:w-26"
-			/>
-		  </a>
-		  <a
 			href="https://warsztatmiejski.org/nowezpt"
 			target="_blank"
 			rel="noopener noreferrer"
@@ -38,7 +24,21 @@ export default function AddWordHeader() {
 			  alt="Nowe ZPT"
 			  width={100}
 			  height={140}
-			  className="h-auto w-20 dark:invert md:w-26"
+			  className="h-auto w-20 dark:invert md:w-24"
+			/>
+		  </a>
+		  <a
+			href="https://warsztatmiejski.org"
+			target="_blank"
+			rel="noopener noreferrer"
+			className="transition-opacity hover:opacity-80"
+		  >
+			<Image
+			  src="/wm-symbol.svg"
+			  alt="Warsztat Miejski"
+			  width={100}
+			  height={100}
+			  className="h-auto w-20 dark:invert md:w-24"
 			/>
 		  </a>
 		</div>
