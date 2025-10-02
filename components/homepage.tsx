@@ -4,7 +4,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Search, Sparkles, ChevronRight, Loader2, Settings } from 'lucide-react'
+import {
+  Search,
+  Sparkles,
+  ChevronRight,
+  Loader2,
+  Settings,
+  ChevronDown,
+  List,
+  Clock,
+} from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,6 +21,7 @@ import { Separator } from '@/components/ui/separator'
 import ThemeToggle from '@/components/theme-toggle'
 import { Skeleton } from '@/components/ui/skeleton'
 import AddWordHeader from '@/components/add-word-header'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   Dialog,
   DialogContent,
@@ -149,6 +159,10 @@ export default function HomePage({
   const [isFetchingCategory, setIsFetchingCategory] = useState(false)
   const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false)
   const lastCategorySlugRef = useRef<string | null>(null)
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false)
+  const [isRecentMenuOpen, setIsRecentMenuOpen] = useState(false)
+  const categorySectionRef = useRef<HTMLElement | null>(null)
+  const entrySectionRef = useRef<HTMLElement | null>(null)
 
   const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
     featuredEntry ?? recentEntries[0] ?? null,
@@ -241,10 +255,14 @@ export default function HomePage({
     setCategoryError(null)
     updateUrlWithCategory(null)
     updateUrlWithEntry(entry.slug)
+    if (entrySectionRef.current) {
+      entrySectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   }
 
   const handleRecentClick = (entry: EntryPreview) => {
     handleSelectEntry(entry)
+    setIsRecentMenuOpen(false)
   }
 
   const loadSuggestions = useCallback(
@@ -315,6 +333,12 @@ export default function HomePage({
   const handleCategoryClick = (slug: string) => {
     const nextCategory = activeCategory === slug ? null : slug
 
+    const scrollToCategory = () => {
+      if (categorySectionRef.current) {
+        categorySectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }
+
     if (nextCategory) {
       setActiveCategory(nextCategory)
       setSearchTerm('')
@@ -326,6 +350,7 @@ export default function HomePage({
       setCategoryEntries([])
       setPendingCategoryFetch(nextCategory)
       updateUrlWithCategory(nextCategory)
+      scrollToCategory()
     } else {
       setActiveCategory(null)
       setPendingCategoryFetch(null)
@@ -334,6 +359,7 @@ export default function HomePage({
       setIsFetchingCategory(false)
       updateUrlWithCategory(null)
     }
+    setIsCategoryMenuOpen(false)
   }
 
   useEffect(() => {
@@ -498,76 +524,124 @@ export default function HomePage({
     </div>
   )
 
+  const categoryButtons = categories.map(category => {
+    const isActive = activeCategory === category.slug
+    return (
+      <button
+        key={category.id}
+        type="button"
+        onClick={() => handleCategoryClick(category.slug)}
+        className={`flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left transition-colors ${
+          isActive
+            ? 'bg-primary/10 text-primary'
+            : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+        }`}
+      >
+        <span>{category.name}</span>
+        {pendingCategoryFetch === category.slug ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <ChevronRight className="h-4 w-4" />
+        )}
+      </button>
+    )
+  })
+
+  const recentEntryButtons = recentSilesianEntries.map(entry => (
+    <button
+      key={entry.id}
+      type="button"
+      onClick={() => handleRecentClick(entry)}
+      className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 dark:border-slate-100 transition-colorsdark:text-slate-100 hover:text-primary hover:border-primary"
+    >
+      <span className="inline-block pb-1 transition-colors ">{entry.sourceWord}</span>
+      <ChevronRight className="h-4 w-4" />
+    </button>
+  ))
+
+  const renderRandomEntryCard = () =>
+    randomEntry ? (
+      <button
+        type="button"
+        onClick={() => handleSelectEntry(randomEntry)}
+        className="w-full cursor-pointer space-y-2 border-b-2 border-slate-900 pb-3 text-left transition-colors hover:text-primary dark:border-slate-100"
+      >
+        <p className="text-xl font-medium text-slate-900 dark:text-slate-100">
+          Czy wiesz co po śląsku znaczy
+        </p>
+        <p className="text-4xl font-bold text-slate-900 dark:text-slate-100">
+          {randomEntry.sourceWord}?
+        </p>
+        <p className="text-right text-sm font-semibold text-primary">Sprawdź →</p>
+      </button>
+    ) : null
+
   return (
     <div className="min-h-screen bg-white bg-[url('/bg-hex.png')] bg-top bg-no-repeat text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-12 px-4 py-14 md:flex-row md:gap-20">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 md:gap-12 md:py-14 md:flex-row md:gap-20">
         <aside className="md:w-1/3 md:sticky md:top-10">
-          <div className="flex h-full flex-col gap-10 pb-6 md:pb-0">
+          <div className="flex h-full flex-col gap-6 pb-6 md:gap-10 md:pb-0">
             <AddWordHeader />
 
-            {randomEntry && (
-              <div className="space-y-3 pt-6">
-                
-                <button
-                  type="button"
-                  onClick={() => handleSelectEntry(randomEntry)}
-                  className="w-full cursor-pointer space-y-2 border-b-2 border-slate-900 pb-3 text-left transition-colors hover:text-primary dark:border-slate-100"
+            <div className="flex flex-col gap-6 pt-6">
+              <div className="flex flex-wrap items-stretch gap-3 md:hidden">
+                {randomEntry && (
+                  <div className="min-w-[200px] flex-1">{renderRandomEntryCard()}</div>
+                )}
+                <Collapsible
+                  open={isCategoryMenuOpen}
+                  onOpenChange={setIsCategoryMenuOpen}
+                  className="min-w-[180px] flex-1"
                 >
-                  <p className="text-xl font-medium text-slate-900 dark:text-slate-100">
-                    Czy wiesz co po śląsku znaczy
-                  </p>
-                  <p className="text-4xl font-bold text-slate-900 dark:text-slate-100">
-                    {randomEntry.sourceWord}?
-                  </p>
-                  <p className="text-right text-sm font-semibold text-primary">
-                    Sprawdź →
-                  </p>
-                </button>
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary dark:border-slate-100 dark:text-slate-100"
+                    >
+                      <span className="flex items-center gap-2">
+                        <List className="h-4 w-4" />
+                        Kategorie
+                      </span>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform ${isCategoryMenuOpen ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 space-y-2">
+                    {categoryButtons}
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
-            )}
 
-            <div className="space-y-3">
-              <h2 className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
-                Kategorie
-              </h2>
-              <nav
-                className="space-y-2 grid gap-x-6 grid-cols-2 md:grid-cols-1 text-sm text-slate-900 dark:text-slate-100"
-                aria-label={`Kategorie (${stats.totalEntries.toLocaleString('pl-PL')} haseł)`}
-              >
-                {categories.map(category => (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => handleCategoryClick(category.slug)}
-                    className={`flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left transition-colors ${
-                      activeCategory === category.slug
-                        ? 'bg-primary/10 text-primary'
-                        : 'hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    <span>{category.name}</span>
-                    {pendingCategoryFetch === category.slug ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </button>
-                ))}
-              </nav>
-                          </div>
+              {randomEntry && (
+                <div className="hidden md:block space-y-3">{renderRandomEntryCard()}</div>
+              )}
+
+              <div className="hidden md:block space-y-3">
+                <h2 className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
+                  Kategorie
+                </h2>
+                <nav
+                  className="space-y-2 text-sm text-slate-900 dark:text-slate-100"
+                  aria-label={`Kategorie (${stats.totalEntries.toLocaleString('pl-PL')} haseł)`}
+                >
+                  {categoryButtons}
+                </nav>
+              </div>
+            </div>
           </div>
         </aside>
 
         <main className="md:w-2/3">
           <div className="flex flex-col gap-8">
-            <section className="flex flex-col gap-4 md:mt-4 md:flex-row md:items-center md:justify-between">
+            <section className="flex flex-col gap-6 sm:mt-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="max-w-xl font-bold text-lg text-slate-900 dark:text-slate-100">
                 Techniczny słownik śląsko-polski rozwijany przez społeczność i ekspertów branżowych.
               </p>
               <Button asChild>
                 <Link href="/dodaj">
                   <Sparkles className="mr-2 h-4 w-4" />
-                  Dodaj nowe słowo
+                  Dodaj słowo!
                 </Link>
               </Button>
             </section>
@@ -631,33 +705,48 @@ export default function HomePage({
               </div>
 
               {recentSilesianEntries.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
-                    Ostatnio dodane hasła
-                  </p>
-                  <div className="grid gap-6 grid-cols-2 lg:grid-cols-3">
-                    {recentSilesianEntries.map(entry => (
-                      <button
-                        key={entry.id}
-                        type="button"
-                        onClick={() => handleRecentClick(entry)}
-                        className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 dark:border-slate-100 transition-colors dark:text-slate-100 hover:text-primary hover:border-primary"
-                      >
-                        <span className="inline-block pb-1">
-                          {entry.sourceWord}
-                        </span>
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    ))}
+                <>
+                  <div className="md:hidden">
+                    <Collapsible open={isRecentMenuOpen} onOpenChange={setIsRecentMenuOpen}>
+                      <CollapsibleTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary dark:border-slate-100 dark:text-slate-100"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Ostatnio dodane hasła
+                          </span>
+                          <ChevronDown
+                            className={`h-4 w-4 transition-transform ${isRecentMenuOpen ? 'rotate-180' : ''}`}
+                          />
+                        </button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-3 space-y-2">
+                        {recentEntryButtons}
+                      </CollapsibleContent>
+                    </Collapsible>
                   </div>
-                </div>
+
+                  <div className="hidden md:block space-y-2">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
+                      Ostatnio dodane hasła
+                    </p>
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                      {recentEntryButtons}
+                    </div>
+                  </div>
+                </>
               )}
             </section>
 
             <Separator className="h-[2px] bg-slate-900 dark:bg-slate-100" />
 
             {!activeCategory && (selectedEntry || isEntryLoading) && (
-              <section className="space-y-6 rounded-sm bg-amber-200/50 p-6 md:p-8 dark:bg-amber-900/50">
+              <section
+                ref={entrySectionRef}
+                className="space-y-6 rounded-sm bg-amber-200/50 p-6 md:p-8 dark:bg-amber-900/50"
+              >
                 {isEntryLoading && !selectedEntry ? (
                   <div className="space-y-6">
                     <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-end">
@@ -759,7 +848,10 @@ export default function HomePage({
             )}
 
             {activeCategory && (
-              <section className="space-y-4 rounded-sm bg-slate-200/50 p-6 md:p-8 dark:bg-slate-900/50">
+              <section
+                ref={categorySectionRef}
+                className="space-y-4 rounded-sm bg-slate-200/50 p-6 md:p-8 dark:bg-slate-900/50"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">
                       Hasła w kategorii {activeCategoryData ? activeCategoryData.name : activeCategory}
