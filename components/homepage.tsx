@@ -79,6 +79,7 @@ export interface HomePageProps {
     email: string
     password: string
   }
+  showAdminCredentials?: boolean
 }
 
 interface SearchResponse {
@@ -141,6 +142,7 @@ export default function HomePage({
   recentEntries,
   categories,
   adminCredentials,
+  showAdminCredentials = false,
 }: HomePageProps) {
 
   const router = useRouter()
@@ -959,7 +961,7 @@ export default function HomePage({
               Użyj poniższych danych, aby zalogować się do panelu moderacji.
             </DialogDescription>
           </DialogHeader>
-          {adminCredentials ? (
+          {showAdminCredentials && adminCredentials ? (
             <div className="space-y-4 py-2">
               <div className="space-y-1">
                 <Label htmlFor="admin-email">Adres e-mail</Label>
@@ -982,12 +984,15 @@ export default function HomePage({
               </div>
             </div>
           ) : (
-            <p className="py-4 text-sm text-slate-600 dark:text-slate-300">
-              Brak zdefiniowanych danych logowania. Uzupełnij zmienne środowiskowe
-              <code className="mx-1 rounded bg-slate-200 px-1 py-0.5 text-xs dark:bg-slate-800">ADMIN_EMAIL</code>
-              i
-              <code className="mx-1 rounded bg-slate-200 px-1 py-0.5 text-xs dark:bg-slate-800">ADMIN_PASSWORD</code>.
-            </p>
+            <div className="space-y-3 py-4 text-sm text-slate-600 dark:text-slate-300">
+              <p>
+                Aby uzyskać dostęp do panelu moderatora, użyj swoich danych logowania. Jeśli ich nie posiadasz,
+                skontaktuj się z administratorem projektu.
+              </p>
+              <Button variant="outline" asChild>
+                <Link href="/admin">Przejdź do logowania</Link>
+              </Button>
+            </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAdminDialogOpen(false)}>
