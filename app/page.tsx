@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import HomePage, { type EntryPreview, type HomePageProps } from '@/components/homepage'
 import { prisma } from '@/lib/prisma'
 import { EntryStatus, SubmissionStatus } from '@prisma/client'
@@ -177,5 +178,9 @@ export default async function Page() {
     adminCredentials,
   }
 
-  return <HomePage {...props} />
+  return (
+    <Suspense fallback={null}>
+      <HomePage {...props} />
+    </Suspense>
+  )
 }
