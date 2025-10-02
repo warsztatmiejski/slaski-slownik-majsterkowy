@@ -13,6 +13,7 @@ import {
   ChevronDown,
   List,
   Clock,
+  Hammer,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -564,7 +565,7 @@ export default function HomePage({
       <button
         type="button"
         onClick={() => handleSelectEntry(randomEntry)}
-        className="w-full cursor-pointer space-y-2 border-b-2 border-slate-900 pb-3 text-left transition-colors hover:text-primary dark:border-slate-100"
+        className="w-full cursor-pointer space-y-2 text-left hover:[&>*]:text-primary [&>*]:transition-colors"
       >
         <p className="text-xl font-medium text-slate-900 dark:text-slate-100">
           Czy wiesz co po śląsku znaczy
@@ -572,22 +573,29 @@ export default function HomePage({
         <p className="text-4xl font-bold text-slate-900 dark:text-slate-100">
           {randomEntry.sourceWord}?
         </p>
-        <p className="text-right text-sm font-semibold text-primary">Sprawdź →</p>
+        <p className="text-right text-sm font-semibold">Sprawdź →</p>
       </button>
     ) : null
+
+  const addWordButton = (
+    <Button asChild className="w-full">
+      <Link href="/dodaj">
+        <Sparkles className="mr-2 h-4 w-4" />
+        Dodaj słowo!
+      </Link>
+    </Button>
+  )
 
   return (
     <div className="min-h-screen bg-white bg-[url('/bg-hex.png')] bg-top bg-no-repeat text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 md:gap-12 md:py-14 md:flex-row md:gap-20">
         <aside className="md:w-1/3 md:sticky md:top-10">
-          <div className="flex h-full flex-col gap-6 pb-6 md:gap-10 md:pb-0">
+          <div className="flex flex-col gap-6 pb-6 md:gap-10 md:pb-0">
             <AddWordHeader />
 
             <div className="flex flex-col gap-6 pt-6">
-              <div className="flex flex-wrap items-stretch gap-3 md:hidden">
-                {randomEntry && (
-                  <div className="min-w-[200px] flex-1">{renderRandomEntryCard()}</div>
-                )}
+              <div className="flex flex-wrap items-stretch gap-6 md:hidden">
+                <div className="min-w-[200px] flex-1">{addWordButton}</div>
                 <Collapsible
                   open={isCategoryMenuOpen}
                   onOpenChange={setIsCategoryMenuOpen}
@@ -613,9 +621,7 @@ export default function HomePage({
                 </Collapsible>
               </div>
 
-              {randomEntry && (
-                <div className="hidden md:block space-y-3">{renderRandomEntryCard()}</div>
-              )}
+              <div className="hidden md:block space-y-3">{addWordButton}</div>
 
               <div className="hidden md:block space-y-3">
                 <h2 className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
@@ -633,22 +639,23 @@ export default function HomePage({
         </aside>
 
         <main className="md:w-2/3">
-          <div className="flex flex-col gap-8">
-            <section className="flex flex-col gap-6 sm:mt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="max-w-xl font-bold text-lg text-slate-900 dark:text-slate-100">
+          <div className="flex flex-col gap-6">
+            <section className="flex flex-wrap items-stretch gap-6 md:mt-4 md:flex-row md:items-start md:justify-between">
+              <p className="text-md min-w-[180px] flex-1 md:max-w-xl font-bold md:text-lg text-slate-900 dark:text-slate-100">
                 Techniczny słownik śląsko-polski rozwijany przez społeczność i ekspertów branżowych.
               </p>
-              <Button asChild>
-                <Link href="/dodaj">
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Dodaj słowo!
-                </Link>
-              </Button>
+              <div className="min-w-[200px] flex-1">
+                {renderRandomEntryCard() ?? (
+                  <div className="rounded-sm border border-dashed border-slate-900/30 p-4 text-sm text-slate-600 dark:border-slate-100/30 dark:text-slate-300">
+                    Brak wyróżnionego hasła.
+                  </div>
+                )}
+              </div>
             </section>
 
             <Separator className="h-[2px] bg-slate-900 dark:bg-slate-100" />
 
-            <section className="space-y-5 rounded-sm bg-red-200/50 p-6 md:p-8 dark:bg-red-900/40">
+            <section className="space-y-3 rounded-sm bg-red-200/50 p-6 md:p-8 dark:bg-red-900/40">
               <div className="space-y-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
@@ -739,8 +746,6 @@ export default function HomePage({
                 </>
               )}
             </section>
-
-            <Separator className="h-[2px] bg-slate-900 dark:bg-slate-100" />
 
             {!activeCategory && (selectedEntry || isEntryLoading) && (
               <section
@@ -886,6 +891,61 @@ export default function HomePage({
                 )}
               </section>
             )}
+
+            <section className="space-y-5 text-slate-900 dark:text-slate-100">
+              <header className="space-y-3">
+                <h2 className="text-2xl font-semibold uppercase tracking-[0.16em]">
+                  Na czym polega projekt “Śląski słownik majsterkowy”
+                </h2>
+                <p className="text-base leading-relaxed text-slate-700 dark:text-slate-300">
+                  Nasz projekt łączy tradycję gwary śląskiej z majsterkowaniem i edukacją techniczną. Chcemy pokazać,
+                  że gwara jest żywa i może być inspirującym narzędziem do nauki.
+                </p>
+              </header>
+
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <h3 className="text-xl font-semibold uppercase tracking-[0.14em]">Co planujemy?</h3>
+                  <ul className="space-y-3 text-base leading-relaxed text-slate-700 dark:text-slate-300">
+                    <li className="flex items-start gap-3">
+                      <Hammer className="mt-1 h-5 w-5 text-primary" />
+                      <span>
+                        stworzenie śląskiego słownika majsterkowego – katalogu słów związanych z techniką, narzędziami i
+                        wynalazczością. Słownik powstanie wspólnie z mieszkańcami Śląska poprzez narzędzie online, a
+                        następnie zostanie wydany w formie drukowanej,
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Hammer className="mt-1 h-5 w-5 text-primary" />
+                      <span>
+                        przygotowanie materiałów edukacyjnych dla nauczycieli i edukatorów, które pomogą wprowadzać gwarę
+                        do zajęć,
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Hammer className="mt-1 h-5 w-5 text-primary" />
+                      <span>
+                        organizację 10 warsztatów: pięciu dla nauczycieli i edukatorów oraz pięciu dla uczniów, łączących
+                        praktyczne majsterkowanie z nauką gwary.
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="text-xl font-semibold uppercase tracking-[0.14em]">Rezultat projektu</h3>
+                  <p className="text-base leading-relaxed text-slate-700 dark:text-slate-300">
+                    Powstaną trzy publikacje: dwa zeszyty inspiracyjne i metodyczne oraz ilustrowany słownik majsterkowy z
+                    co najmniej 50 hasłami.
+                  </p>
+                </div>
+
+                <p className="text-base leading-relaxed text-slate-700 dark:text-slate-300">
+                  Dzięki wspólnej pracy nad słownikiem i warsztatom mieszkańcy Śląska w różnym wieku będą mogli aktywnie
+                  włączyć się w ochronę i rozwój gwary – w nowoczesnej, twórczej formie.
+                </p>
+              </div>
+            </section>
 
           </div>
         </main>

@@ -10,7 +10,7 @@ export default function AddWordHeader() {
 		  width={216}
 		  height={200}
 		  priority
-		  className="h-54 w-auto dark:invert md:h-auto md:w-full"
+		  className="h-48 w-auto dark:invert md:h-auto md:w-full"
 		/>
 		<div className="flex flex-col items-end gap-6 md:gap-8">
 		  <a
