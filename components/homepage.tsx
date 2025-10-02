@@ -892,10 +892,10 @@ export default function HomePage({
               </section>
             )}
 
-            <section className="space-y-5 text-slate-900 dark:text-slate-100">
+            <section className="space-y-5 mt-5 text-slate-900 dark:text-slate-100">
               <header className="space-y-3">
-                <h2 className="text-2xl font-semibold uppercase tracking-[0.16em]">
-                  Na czym polega projekt “Śląski słownik majsterkowy”
+                <h2 className="text-2xl font-semibold">
+                  Na czym polega projekt „Śląski słownik majsterkowy”
                 </h2>
                 <p className="text-base leading-relaxed text-slate-700 dark:text-slate-300">
                   Nasz projekt łączy tradycję gwary śląskiej z majsterkowaniem i edukacją techniczną. Chcemy pokazać,
@@ -905,7 +905,7 @@ export default function HomePage({
 
               <div className="space-y-6">
                 <div className="space-y-3">
-                  <h3 className="text-xl font-semibold uppercase tracking-[0.14em]">Co planujemy?</h3>
+                  <h3 className="text-xl font-semibold uppercase">Co planujemy?</h3>
                   <ul className="space-y-3 text-base leading-relaxed text-slate-700 dark:text-slate-300">
                     <li className="flex items-start gap-3">
                       <Hammer className="mt-1 h-5 w-5 text-primary" />
@@ -933,7 +933,7 @@ export default function HomePage({
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-xl font-semibold uppercase tracking-[0.14em]">Rezultat projektu</h3>
+                  <h3 className="text-xl font-semibold uppercase">Rezultat projektu</h3>
                   <p className="text-base leading-relaxed text-slate-700 dark:text-slate-300">
                     Powstaną trzy publikacje: dwa zeszyty inspiracyjne i metodyczne oraz ilustrowany słownik majsterkowy z
                     co najmniej 50 hasłami.

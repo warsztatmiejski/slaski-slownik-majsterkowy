@@ -154,8 +154,10 @@ export default async function Page() {
     type: category.type,
   }))
 
+  const shouldExposeAdminCredentials = process.env.NODE_ENV !== 'production'
+
   const adminCredentials =
-    process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD
+    shouldExposeAdminCredentials && process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD
       ? {
           email: process.env.ADMIN_EMAIL,
           password: process.env.ADMIN_PASSWORD,

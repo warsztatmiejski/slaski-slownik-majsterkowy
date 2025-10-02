@@ -14,29 +14,21 @@ export async function GET() {
 
     const [totalEntries, pendingSubmissions, approvedToday, rejectedToday] = await Promise.all([
       prisma.dictionaryEntry.count({
-        where: {
-          status: EntryStatus.APPROVED,
-        },
+        where: { status: EntryStatus.APPROVED },
       }),
       prisma.publicSubmission.count({
-        where: {
-          status: SubmissionStatus.PENDING,
-        },
+        where: { status: SubmissionStatus.PENDING },
       }),
       prisma.dictionaryEntry.count({
         where: {
           status: EntryStatus.APPROVED,
-          approvedAt: {
-            gte: today,
-          },
+          approvedAt: { gte: today },
         },
       }),
       prisma.publicSubmission.count({
         where: {
           status: SubmissionStatus.REJECTED,
-          reviewedAt: {
-            gte: today,
-          },
+          reviewedAt: { gte: today },
         },
       }),
     ])
@@ -48,7 +40,7 @@ export async function GET() {
       rejectedToday,
     })
   } catch (error) {
-    console.error('Stats error:', error)
+    console.error('Admin stats error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

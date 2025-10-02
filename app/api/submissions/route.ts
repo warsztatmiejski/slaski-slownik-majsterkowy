@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
 	const status = searchParams.get('status') as SubmissionStatus | null
 	const limit = parseInt(searchParams.get('limit') || '50')
 
-	const submissions = await prisma.publicSubmission.findMany({
+  const submissions = await prisma.publicSubmission.findMany({
 		  where: {
 			...(status && { status }),
 		  },
@@ -122,9 +122,51 @@ export async function GET(request: NextRequest) {
 	  take: limit
 	})
 
+	const categoryIds = Array.from(new Set(submissions.map(submission => submission.categoryId)))
+	const categories = categoryIds.length
+	  ? await prisma.category.findMany({
+	      where: {
+	        id: {
+	          in: categoryIds,
+	        },
+	      },
+	      select: {
+	        id: true,
+	        name: true,
+	        slug: true,
+	      },
+	    })
+	  : []
+
+	const categoryMap = new Map(categories.map(category => [category.id, category]))
+
+	const payload = submissions.map(submission => ({
+	  id: submission.id,
+	  sourceWord: submission.sourceWord,
+	  sourceLang: submission.sourceLang,
+	  targetWord: submission.targetWord,
+	  targetLang: submission.targetLang,
+	  pronunciation: submission.pronunciation ?? undefined,
+	  partOfSpeech: submission.partOfSpeech ?? undefined,
+	  category: categoryMap.get(submission.categoryId) ?? null,
+	  categoryId: submission.categoryId,
+	  status: submission.status,
+	  submittedAt: submission.createdAt.toISOString(),
+	  submitterName: submission.submitterName ?? undefined,
+	  submitterEmail: submission.submitterEmail ?? undefined,
+	  notes: submission.notes ?? undefined,
+	  exampleSentences: submission.exampleSentences.map(example => {
+		const [sourceText, translatedText = ''] = example.split('|')
+		return {
+		  sourceText: sourceText.trim(),
+		  translatedText: translatedText.trim(),
+		}
+	  }),
+	}))
+
 	return NextResponse.json({
-	  submissions,
-	  total: submissions.length
+	  submissions: payload,
+	  total: payload.length
 	})
 
   } catch (error) {
