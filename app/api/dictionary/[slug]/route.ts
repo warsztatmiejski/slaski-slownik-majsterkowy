@@ -67,7 +67,6 @@ export async function GET(
         exampleSentences: entry.exampleSentences.map(sentence => ({
           sourceText: sentence.sourceText,
           translatedText: sentence.translatedText,
-          context: sentence.context ?? undefined,
         })),
       },
     })

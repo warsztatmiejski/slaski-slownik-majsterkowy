@@ -64,7 +64,6 @@ model ExampleSentence {
   id              String @id @default(cuid())
   sourceText      String
   translatedText  String
-  context         String? // Where this example would be used
   order           Int     // For ordering multiple examples
 
   entryId         String

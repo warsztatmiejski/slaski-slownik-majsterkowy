@@ -66,14 +66,13 @@ export async function PATCH(
 
 	if (action === 'approve') {
 	  // Create a transaction to approve submission and create dictionary entry
-	  const result = await prisma.$transaction(async (tx) => {
+	const result = await prisma.$transaction(async (tx) => {
 		// Parse example sentences
 		const exampleSentences = submission.exampleSentences.map((example, index) => {
 		  const [sourceText, translatedText] = example.split(' | ')
 		  return {
 			sourceText: sourceText || '',
 			translatedText: translatedText || '',
-			context: '',
 			order: index + 1
 		  }
 		})

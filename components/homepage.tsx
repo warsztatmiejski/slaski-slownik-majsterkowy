@@ -9,7 +9,6 @@ import { Search, Sparkles, ChevronRight, Loader2, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
 import ThemeToggle from '@/components/theme-toggle'
 import { Skeleton } from '@/components/ui/skeleton'
 import AddWordHeader from '@/components/add-word-header'
@@ -44,7 +43,6 @@ export interface EntryPreview {
   exampleSentences: {
     sourceText: string
     translatedText: string
-    context?: string
   }[]
 }
 
@@ -92,16 +90,10 @@ interface SearchResponse {
     exampleSentences: {
       sourceText: string
       translatedText: string
-      context?: string | null
     }[]
   }>
   total: number
   query: string
-}
-
-const languageLabels: Record<LanguageCode, string> = {
-  SILESIAN: 'śląski',
-  POLISH: 'polski',
 }
 
 const fieldFrame =
@@ -128,13 +120,8 @@ function mapSearchResult(result: SearchResponse['results'][number]): EntryPrevie
     exampleSentences: result.exampleSentences.map(sentence => ({
       sourceText: sentence.sourceText,
       translatedText: sentence.translatedText,
-      context: sentence.context ?? undefined,
     })),
   }
-}
-
-function languageDirection(entry: EntryPreview): string {
-  return `${languageLabels[entry.sourceLang]} → ${languageLabels[entry.targetLang]}`
 }
 
 export default function HomePage({
@@ -163,10 +150,22 @@ export default function HomePage({
   const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false)
   const lastCategorySlugRef = useRef<string | null>(null)
 
-  const randomEntry = useMemo(() => {
-    if (featuredEntry) return featuredEntry
-    if (recentEntries.length > 0) return recentEntries[0]
-    return null
+  const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
+    featuredEntry ?? recentEntries[0] ?? null,
+  )
+
+  useEffect(() => {
+    const pool = [featuredEntry, ...recentEntries].filter(
+      (entry): entry is EntryPreview => Boolean(entry),
+    )
+
+    if (!pool.length) {
+      setRandomEntry(null)
+      return
+    }
+
+    const randomIndex = Math.floor(Math.random() * pool.length)
+    setRandomEntry(pool[randomIndex])
   }, [featuredEntry, recentEntries])
 
   const recentSilesianEntries = useMemo(() => {
@@ -180,6 +179,22 @@ export default function HomePage({
     () => categories.find(category => category.slug === activeCategory) || null,
     [categories, activeCategory],
   )
+
+  const translations = useMemo(() => {
+    if (!selectedEntry) return []
+    const unique = new Set<string>()
+    const mainTranslation = selectedEntry.targetWord?.trim()
+    if (mainTranslation) {
+      unique.add(mainTranslation)
+    }
+    selectedEntry.alternativeTranslations.forEach(translation => {
+      const normalized = translation.trim()
+      if (normalized) {
+        unique.add(normalized)
+      }
+    })
+    return Array.from(unique)
+  }, [selectedEntry])
 
   useEffect(() => {
     if (!activeCategory) {
@@ -472,17 +487,14 @@ export default function HomePage({
   ) => (
     <div
       key={`${sentence.sourceText}-${index}`}
-      className="rounded-sm border border-slate-900/30 bg-white/70 p-4 text-slate-900 shadow-sm transition-colors dark:border-slate-100/30 dark:bg-slate-900/70 dark:text-slate-100"
+      className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start md:gap-6"
     >
-      <p className="font-medium text-primary">{sentence.sourceText}</p>
-      <p className="text-sm text-slate-700 dark:text-slate-300">
+      <p className="text-2xl font-semibold italic leading-tight text-primary md:text-3xl">
+        {sentence.sourceText}
+      </p>
+      <p className="text-base leading-relaxed text-slate-700 dark:text-slate-300 md:text-right md:text-lg">
         {sentence.translatedText}
       </p>
-      {sentence.context && (
-        <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-          {sentence.context}
-        </p>
-      )}
     </div>
   )
 
@@ -490,7 +502,7 @@ export default function HomePage({
     <div className="min-h-screen bg-white bg-[url('/bg-hex.png')] bg-top bg-no-repeat text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-12 px-4 py-14 md:flex-row md:gap-20">
         <aside className="md:w-1/3 md:sticky md:top-10">
-          <div className="flex h-full flex-col gap-10 py-6 md:py-0">
+          <div className="flex h-full flex-col gap-10 pb-6 md:pb-0">
             <AddWordHeader />
 
             {randomEntry && (
@@ -515,8 +527,11 @@ export default function HomePage({
             )}
 
             <div className="space-y-3">
+              <h2 className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
+                Kategorie
+              </h2>
               <nav
-                className="space-y-2 text-sm text-slate-900 dark:text-slate-100"
+                className="space-y-2 grid gap-x-6 grid-cols-2 md:grid-cols-1 text-sm text-slate-900 dark:text-slate-100"
                 aria-label={`Kategorie (${stats.totalEntries.toLocaleString('pl-PL')} haseł)`}
               >
                 {categories.map(category => (
@@ -560,14 +575,13 @@ export default function HomePage({
             <Separator className="h-[2px] bg-slate-900 dark:bg-slate-100" />
 
             <section className="space-y-5 rounded-sm bg-red-200/50 p-6 md:p-8 dark:bg-red-900/40">
-              <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Wyszukaj w słowniku</h2>
               <div className="space-y-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
                   <Input
                     value={searchTerm}
                     onChange={event => handleInputChange(event.target.value)}
-                    placeholder="Zacznij wpisywać słowo po śląsku lub po polsku..."
+                    placeholder="Wyszukaj w słowniku..."
                     className={`${inputField} h-14 pl-11 text-lg font-semibold tracking-wide`}
                   />
                   {isFetchingSuggestions && (
@@ -621,15 +635,15 @@ export default function HomePage({
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
                     Ostatnio dodane hasła
                   </p>
-                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-6 grid-cols-2 lg:grid-cols-3">
                     {recentSilesianEntries.map(entry => (
                       <button
                         key={entry.id}
                         type="button"
                         onClick={() => handleRecentClick(entry)}
-                        className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 dark:border-slate-100 transition-colorsdark:text-slate-100 hover:text-primary hover:border-primary"
+                        className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 dark:border-slate-100 transition-colors dark:text-slate-100 hover:text-primary hover:border-primary"
                       >
-                        <span className="inline-block pb-1 transition-colors ">
+                        <span className="inline-block pb-1">
                           {entry.sourceWord}
                         </span>
                         <ChevronRight className="h-4 w-4" />
@@ -644,76 +658,95 @@ export default function HomePage({
 
             {!activeCategory && (selectedEntry || isEntryLoading) && (
               <section className="space-y-6 rounded-sm bg-amber-200/50 p-6 md:p-8 dark:bg-amber-900/50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Szczegóły hasła</h2>
-                    <p className="text-sm text-slate-700 dark:text-slate-200">
-                      {selectedEntry ? languageDirection(selectedEntry) : 'Ładowanie wpisu...'}
-                    </p>
-                  </div>
-                  {selectedEntry && (
-                    <Badge variant="secondary" className="bg-white/80 text-slate-900 dark:bg-slate-900/80 dark:text-slate-100">
-                      {selectedEntry.category.name}
-                    </Badge>
-                  )}
-                </div>
-
                 {isEntryLoading && !selectedEntry ? (
-                  <div className="space-y-4">
-                    <Skeleton className="h-10 w-1/3" />
-                    <Skeleton className="h-5 w-1/4" />
-                    <Skeleton className="h-20 w-full" />
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <Skeleton className="h-24 w-full" />
-                      <Skeleton className="h-24 w-full" />
+                  <div className="space-y-6">
+                    <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-end">
+                      <div className="space-y-3">
+                        <Skeleton className="h-12 w-3/4" />
+                        <Skeleton className="h-4 w-1/3" />
+                        <Skeleton className="h-3 w-1/4" />
+                      </div>
+                      <div className="space-y-3 md:text-right">
+                        <Skeleton className="h-12 w-2/3 md:ml-auto" />
+                        <Skeleton className="h-3 w-1/3 md:ml-auto" />
+                        <Skeleton className="h-3 w-1/4 md:ml-auto" />
+                      </div>
+                    </div>
+                    <div className="h-px w-full bg-slate-900/20 dark:bg-slate-100/20" />
+                    <div className="space-y-3">
+                      <Skeleton className="h-5 w-4/5" />
+                      <Skeleton className="h-5 w-3/5" />
+                      <Skeleton className="h-5 w-2/5" />
+                    </div>
+                    <div className="h-px w-full bg-slate-900/20 dark:bg-slate-100/20" />
+                    <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
+                      <Skeleton className="h-20 w-full" />
+                      <Skeleton className="h-10 w-full" />
                     </div>
                   </div>
                 ) : selectedEntry ? (
                   <div className="space-y-6">
-                    <div className="flex flex-wrap items-end justify-between gap-4">
-                      <div>
-                        <h3 className="text-4xl font-semibold tracking-wide text-primary">
+                    <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
+                      <div className="space-y-2">
+                        <h3 className="text-5xl font-semibold leading-tight text-primary mb-4 md:text-6xl">
                           {selectedEntry.sourceWord}
                         </h3>
                         {selectedEntry.pronunciation && (
-                          <p className="text-sm font-mono text-slate-600 dark:text-slate-300">
+                          <p className="text-lg font-mono text-slate-600 dark:text-slate-300">
                             [{selectedEntry.pronunciation}]
                           </p>
                         )}
-                      </div>
-                      <div className="space-y-1 text-right text-sm text-slate-600 dark:text-slate-300">
                         {selectedEntry.partOfSpeech && (
-                          <p className="uppercase tracking-[0.18em]">{selectedEntry.partOfSpeech}</p>
+                          <p className="text-xs font-bold uppercase text-slate-900 dark:text-slate-100">
+                            {selectedEntry.partOfSpeech}
+                          </p>
                         )}
-                        <p className="font-semibold text-slate-900 dark:text-slate-100">
-                          {selectedEntry.targetWord}
-                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2 text-right">
+                        {translations.length > 0 ? (
+                          translations.map(translation => (
+                            <p
+                              key={translation}
+                              className="text-3xl font-semibold leading-tight text-slate-900 dark:text-slate-100 md:text-4xl"
+                            >
+                              {translation}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-base text-slate-700 dark:text-slate-300">
+                            Brak tłumaczeń.
+                          </p>
+                        )}
                       </div>
                     </div>
 
-                    {selectedEntry.alternativeTranslations.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-sm font-semibold uppercase tracking-[0.16em]">Alternatywne tłumaczenia</p>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedEntry.alternativeTranslations.map(translation => (
-                            <Badge key={translation} variant="outline">
-                              {translation}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedEntry.notes && (
-                      <div className="rounded-sm border border-slate-900/20 bg-white/70 p-4 text-sm text-slate-700 shadow-sm dark:border-slate-100/20 dark:bg-slate-900/70 dark:text-slate-200">
-                        {selectedEntry.notes}
-                      </div>
-                    )}
+                    <Separator className="h-px bg-slate-900/20 dark:bg-slate-100/20" />
 
                     <div className="space-y-4">
-                      <p className="text-sm font-semibold uppercase tracking-[0.18em]">Przykłady użycia</p>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {selectedEntry.exampleSentences.map(renderExampleSentence)}
+                      {selectedEntry.exampleSentences.length > 0 ? (
+                        selectedEntry.exampleSentences.map(renderExampleSentence)
+                      ) : (
+                        <p className="text-sm text-slate-600 dark:text-slate-300">
+                          Brak przykładów użycia dla tego hasła.
+                        </p>
+                      )}
+                    </div>
+
+                    <Separator className="h-px bg-slate-900/20 dark:bg-slate-100/20" />
+
+                    <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
+                      <div className="text-md text-slate-900 dark:text-slate-100">
+                        {selectedEntry.notes ?? 'Brak dodatkowych notatek.'}
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => handleCategoryClick(selectedEntry.category.slug)}
+                          className="inline-flex items-center gap-2 rounded-sm border border-slate-900 px-3 py-1 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary dark:border-slate-100 dark:text-slate-100 dark:hover:border-primary"
+                        >
+                          <span>{selectedEntry.category.name}</span>
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -745,9 +778,9 @@ export default function HomePage({
                         key={entry.id}
                         type="button"
                         onClick={() => handleSelectEntry(entry)}
-                        className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 dark:border-slate-100 transition-colorsdark:text-slate-100 hover:text-primary hover:border-primary"
+                        className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 dark:border-slate-100 transition-colors dark:text-slate-100 hover:text-primary hover:border-primary"
                       >
-                        <span className="inline-block pb-1 transition-colors">
+                        <span className="inline-block pb-1">
                           {entry.sourceWord}
                         </span>
                         <ChevronRight className="h-4 w-4" />
@@ -833,7 +866,7 @@ export default function HomePage({
 
           <div className="flex flex-col gap-4 text-sm sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-xl">
-              Śląski Słownik Majsterkowy chroni fachową terminologię regionu i udostępnia ją kolejnym pokoleniom specjalistów.
+              Projekt współfinansowany ze środków Ministra Kultury i Dziedzictwa Narodowego w ramach programu dotacyjnego „Różnorodność Językowa” Instytutu Różnorodności Językowej Rzeczypospolitej.
             </p>
             <div className="flex items-center gap-10">
               <Image

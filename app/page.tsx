@@ -28,7 +28,6 @@ function mapEntry(entry: {
   exampleSentences: {
     sourceText: string
     translatedText: string
-    context: string | null
     order: number
   }[]
 }): EntryPreview {
@@ -53,7 +52,6 @@ function mapEntry(entry: {
       .map(sentence => ({
         sourceText: sentence.sourceText,
         translatedText: sentence.translatedText,
-        context: sentence.context ?? undefined,
       })),
   }
 }
@@ -96,7 +94,6 @@ export default async function Page() {
           select: {
             sourceText: true,
             translatedText: true,
-            context: true,
             order: true,
           },
           orderBy: { order: 'asc' },
@@ -128,7 +125,6 @@ export default async function Page() {
           select: {
             sourceText: true,
             translatedText: true,
-            context: true,
             order: true,
           },
           orderBy: { order: 'asc' },

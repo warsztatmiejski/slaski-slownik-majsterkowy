@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
         ? {
             sourceText: entry.exampleSentences[0].sourceText,
             translatedText: entry.exampleSentences[0].translatedText,
-            context: entry.exampleSentences[0].context ?? undefined,
           }
         : null,
     }))

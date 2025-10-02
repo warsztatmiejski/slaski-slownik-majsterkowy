@@ -8,7 +8,7 @@ export interface SearchResult {
   targetWord: string
   sourceLang: Language
   targetLang: Language
-  exampleSentences: { sourceText: string; translatedText: string; context?: string }[]
+  exampleSentences: { sourceText: string; translatedText: string }[]
   pronunciation?: string
   category: { id: string; name: string; slug: string }
   partOfSpeech?: string
@@ -30,7 +30,7 @@ export interface SubmissionData {
   pronunciation?: string
   categoryId: string
   partOfSpeech?: string
-  exampleSentences: { sourceText: string; translatedText: string; context?: string }[]
+  exampleSentences: { sourceText: string; translatedText: string }[]
   submitterName?: string
   submitterEmail?: string
   notes?: string
@@ -51,7 +51,6 @@ export interface RecentEntry {
   exampleSentence: {
     sourceText: string
     translatedText: string
-    context?: string
   } | null
 }
 
@@ -69,7 +68,6 @@ export interface FeaturedEntry {
   exampleSentence: {
     sourceText: string
     translatedText: string
-    context?: string
   } | null
 }
 

@@ -51,7 +51,6 @@ export async function GET() {
           ? {
               sourceText: firstExample.sourceText,
               translatedText: firstExample.translatedText,
-              context: firstExample.context ?? undefined,
             }
           : null,
       },

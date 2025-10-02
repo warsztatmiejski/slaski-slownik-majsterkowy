@@ -16,7 +16,6 @@ interface DictionarySeedEntry {
   examples: {
     sourceText: string
     translatedText: string
-    context?: string
   }[]
 }
 
@@ -155,12 +154,10 @@ async function main() {
         {
           sourceText: 'Idã na šichtã, musza być na dół za pół godziny.',
           translatedText: 'Idę na zmianę, muszę być na dole za pół godziny.',
-          context: 'Zapowiedź rozpoczęcia pracy',
         },
         {
           sourceText: 'Po nocnej šichty je człowiek spodlony.',
           translatedText: 'Po nocnej zmianie człowiek jest zmęczony.',
-          context: 'Opis zmęczenia po pracy',
         },
       ],
     },
@@ -233,7 +230,6 @@ async function main() {
         {
           sourceText: 'Pilnuj palców, jak robisz na krajzydze.',
           translatedText: 'Pilnuj palców, gdy pracujesz na pile tarczowej.',
-          context: 'Zasady bezpieczeństwa przy pracy',
         },
       ],
     },
@@ -363,7 +359,6 @@ async function main() {
           create: entry.examples.map((example, exampleIndex) => ({
             sourceText: example.sourceText,
             translatedText: example.translatedText,
-            context: example.context ?? null,
             order: exampleIndex + 1,
           })),
         },
@@ -388,7 +383,6 @@ async function main() {
           create: entry.examples.map((example, exampleIndex) => ({
             sourceText: example.sourceText,
             translatedText: example.translatedText,
-            context: example.context ?? null,
             order: exampleIndex + 1,
           })),
         },

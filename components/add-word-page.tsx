@@ -17,7 +17,6 @@ interface ExampleSentence {
   id: string
   sourceText: string
   translatedText: string
-  context: string
 }
 
 interface LocationArea {
@@ -86,7 +85,7 @@ export default function AddWordPage() {
     pronunciation: '',
     categoryId: '',
     partOfSpeech: '',
-    exampleSentences: [{ id: '1', sourceText: '', translatedText: '', context: '' }],
+    exampleSentences: [{ id: '1', sourceText: '', translatedText: '' }],
     locations: [{ id: '1', name: '' }],
     submitterName: '',
     submitterEmail: '',
@@ -108,7 +107,6 @@ export default function AddWordPage() {
       id: Date.now().toString(),
       sourceText: '',
       translatedText: '',
-      context: '',
     }
     setForm(prev => ({
       ...prev,
@@ -364,15 +362,6 @@ export default function AddWordPage() {
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Kontekst przykładu (opcjonalnie)</Label>
-                      <Input
-                        value={example.context}
-                        onChange={e => updateExampleSentence(example.id, 'context', e.target.value)}
-                        placeholder="np. popularne powiedzenie w kopalni"
-                        className={inputField}
-                      />
-                    </div>
                     {index < form.exampleSentences.length - 1 && (
                       <Separator className="h-px w-full bg-slate-900/40 dark:bg-slate-100/40" />
                     )}
@@ -487,7 +476,7 @@ export default function AddWordPage() {
           <div className="flex flex-col gap-4 text-sm sm:flex-row sm:items-center sm:justify-between">
 			<ThemeToggle />
             <p className="max-w-xl">
-              Projekt współfinansowany ze środków Ministra Kultury i Dziedzictwa Narodowego w ramach programu dotacyjnego “Różnorodność Językowa” Instytutu Różnorodności Językowej Rzeczypospolitej.
+              Projekt współfinansowany ze środków Ministra Kultury i Dziedzictwa Narodowego w ramach programu dotacyjnego „Różnorodność Językowa” Instytutu Różnorodności Językowej Rzeczypospolitej.
             </p>
             <div className="flex items-center gap-10">
               <Image src="/mkdin.svg" alt="Ministerstwo Kultury" width={140} height={48} className="h-10 w-auto dark:invert" />

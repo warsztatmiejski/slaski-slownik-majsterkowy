@@ -91,7 +91,6 @@ export async function GET(request: NextRequest) {
 	  exampleSentences: entry.exampleSentences.map(example => ({
 		sourceText: example.sourceText,
 		translatedText: example.translatedText,
-		context: example.context ?? undefined,
 	  })),
 	  notes: entry.notes ?? undefined,
 	  alternativeTranslations: entry.alternativeTranslations,

@@ -10,7 +10,7 @@ interface SubmissionData {
   pronunciation?: string
   categoryId: string
   partOfSpeech?: string
-  exampleSentences: { sourceText: string; translatedText: string; context?: string }[]
+  exampleSentences: { sourceText: string; translatedText: string }[]
   submitterName?: string
   submitterEmail?: string
   notes?: string
