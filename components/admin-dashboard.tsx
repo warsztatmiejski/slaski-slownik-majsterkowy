@@ -67,8 +67,8 @@ interface EntryFormState {
   exampleSentences: ExampleFormState[]
 }
 
-const inputStyles = 'border border-slate-300 bg-white text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100'
-const textareaStyles = 'border border-slate-300 bg-white text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100'
+const inputStyles = 'border border-slate-300 bg-white text-slate-900'
+const textareaStyles = 'border border-slate-300 bg-white text-slate-900'
 
 function generateTempId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -353,8 +353,8 @@ export default function AdminDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-50 to-background dark:from-slate-900/20">
-        <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-50 to-background">
+        <div className="flex items-center gap-3 text-slate-600">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span>Wczytywanie panelu administratora…</span>
         </div>
@@ -363,7 +363,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-background dark:from-slate-900/20">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-background">
       <header className="border-b bg-card shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -394,8 +394,8 @@ export default function AdminDashboard() {
 
       <main className="container mx-auto px-4 py-8 space-y-6">
         {globalError && (
-          <Card className="border-red-300 dark:border-red-800">
-            <CardContent className="flex items-center justify-between gap-4 p-4 text-sm text-red-700 dark:text-red-300">
+          <Card className="border-red-300">
+            <CardContent className="flex items-center justify-between gap-4 p-4 text-sm text-red-700">
               <span>{globalError}</span>
               <Button size="sm" variant="outline" onClick={() => fetchAllData()}>
                 Spróbuj ponownie
@@ -422,11 +422,11 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Oczekujące zgłoszenia</p>
-                  <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+                  <p className="text-3xl font-bold text-orange-600">
                     {stats?.pendingSubmissions ?? pendingSubmissions.length}
                   </p>
                 </div>
-                <Clock className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+                <Clock className="h-8 w-8 text-orange-600" />
               </div>
             </CardContent>
           </Card>
@@ -436,9 +436,9 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Zatwierdzone dziś</p>
-                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">{stats?.approvedToday ?? '—'}</p>
+                  <p className="text-3xl font-bold text-green-600">{stats?.approvedToday ?? '—'}</p>
                 </div>
-                <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+                <Check className="h-8 w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
@@ -448,9 +448,9 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Odrzucone dziś</p>
-                  <p className="text-3xl font-bold text-red-600 dark:text-red-400">{stats?.rejectedToday ?? '—'}</p>
+                  <p className="text-3xl font-bold text-red-600">{stats?.rejectedToday ?? '—'}</p>
                 </div>
-                <X className="h-8 w-8 text-red-600 dark:text-red-400" />
+                <X className="h-8 w-8 text-red-600" />
               </div>
             </CardContent>
           </Card>
@@ -481,7 +481,7 @@ export default function AdminDashboard() {
                 ) : (
                   <div className="space-y-4">
                     {pendingSubmissions.map(submission => (
-                      <Card key={submission.id} className="border-orange-200 dark:border-orange-800">
+                      <Card key={submission.id} className="border-orange-200">
                         <CardContent className="space-y-4 p-6">
                           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                             <div className="space-y-3 flex-1">
@@ -529,13 +529,13 @@ export default function AdminDashboard() {
                                     <div className="grid gap-4 md:grid-cols-2">
                                       <div className="space-y-1">
                                         <Label>Słowo źródłowe</Label>
-                                        <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                                        <p className="text-lg font-semibold text-slate-900">
                                           {submission.sourceWord}
                                         </p>
                                       </div>
                                       <div className="space-y-1">
                                         <Label>Tłumaczenie</Label>
-                                        <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                                        <p className="text-lg font-semibold text-slate-900">
                                           {submission.targetWord}
                                         </p>
                                       </div>
@@ -572,7 +572,7 @@ export default function AdminDashboard() {
                                       {submission.exampleSentences.length ? (
                                         <ul className="space-y-2">
                                           {submission.exampleSentences.map((example, index) => (
-                                            <li key={`${example.sourceText}-${index}`} className="rounded border border-slate-200 bg-white p-3 text-slate-900 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-100">
+                                            <li key={`${example.sourceText}-${index}`} className="rounded border border-slate-200 bg-white p-3 text-slate-900">
                                               <p className="font-medium">{example.sourceText}</p>
                                               <p className="text-xs text-muted-foreground">→ {example.translatedText}</p>
                                             </li>
@@ -637,7 +637,7 @@ export default function AdminDashboard() {
                                 {processingSubmissionId === submission.id ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
-                                  <X className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                  <X className="h-4 w-4 text-red-600" />
                                 )}
                               </Button>
                               <Button
@@ -697,7 +697,7 @@ export default function AdminDashboard() {
                 ) : (
                   <div className="space-y-4">
                     {filteredEntries.map(entry => (
-                      <Card key={entry.id} className="border-green-200 dark:border-green-800">
+                      <Card key={entry.id} className="border-green-200">
                         <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-start md:justify-between">
                           <div className="space-y-2">
                             <div className="flex flex-wrap items-center gap-3">
@@ -705,7 +705,7 @@ export default function AdminDashboard() {
                                 {entry.sourceWord} → {entry.targetWord}
                               </h3>
                               <Badge variant="outline">{entry.category.name}</Badge>
-                              <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200">
+                              <Badge variant="secondary" className="bg-green-100 text-green-800">
                                 {entry.status}
                               </Badge>
                             </div>
@@ -750,7 +750,7 @@ export default function AdminDashboard() {
                     {categories.map(category => (
                       <li
                         key={category.id}
-                        className="flex flex-col gap-2 rounded border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-100 md:flex-row md:items-center md:justify-between"
+                        className="flex flex-col gap-2 rounded border border-slate-200 bg-white p-3 text-sm text-slate-900 md:flex-row md:items-center md:justify-between"
                       >
                         <div>
                           <p className="font-medium">{category.name}</p>
@@ -946,7 +946,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {entryError && <p className="text-sm text-red-600 dark:text-red-400">{entryError}</p>}
+              {entryError && <p className="text-sm text-red-600">{entryError}</p>}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Nie znaleziono danych wpisu.</p>
@@ -993,7 +993,7 @@ export default function AdminDashboard() {
                 placeholder="np. gornictwo"
               />
             </div>
-            {categoryError && <p className="text-sm text-red-600 dark:text-red-400">{categoryError}</p>}
+            {categoryError && <p className="text-sm text-red-600">{categoryError}</p>}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(false)} disabled={isSavingCategory}>
                 Anuluj

@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
-import Image from 'next/image'
 import AddWordHeader from '@/components/add-word-header'
+import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import ThemeToggle from '@/components/theme-toggle'
 
 interface ExampleSentence {
   id: string
@@ -69,12 +68,12 @@ const languageLabel: Record<'SILESIAN' | 'POLISH', string> = {
 }
 
 const fieldFrame =
-  'border border-slate-900 bg-white/80 text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] dark:border-slate-100 dark:bg-slate-900/60 dark:text-slate-100'
+  'border border-slate-900 bg-white/80 text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]'
 const inputField = `w-full rounded-sm text-base ${fieldFrame}`
 const wordField = `w-full rounded-sm text-lg font-semibold tracking-wide ${fieldFrame}`
 const textareaField = `w-full min-h-[170px] rounded-sm px-3 py-3 text-base ${fieldFrame}`
 const selectTriggerStyles = `w-full rounded-sm px-3 py-3 text-base font-medium text-left ${fieldFrame}`
-const separatorStyles = 'h-[2px] w-full bg-slate-900 dark:bg-slate-100'
+const separatorStyles = 'h-[2px] w-full bg-slate-900'
 
 export default function AddWordPage() {
   const createInitialForm = (): SubmissionForm => ({
@@ -186,7 +185,7 @@ export default function AddWordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white bg-[url('/bg-hex.png')] bg-top bg-no-repeat text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen bg-white bg-[url('/bg-hex.png')] bg-top bg-no-repeat text-slate-900 transition-colors">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-12 px-4 py-14 md:flex-row md:gap-20">
         <aside className="md:w-1/3 md:sticky md:top-10">
           <AddWordHeader />
@@ -196,15 +195,15 @@ export default function AddWordPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-8">
             <div className="space-y-3">
               <p className="text-3xl font-bold uppercase tracking-[0.24em]">Zgłoś nowe słowo do słownika</p>
-              <p className="text-sm text-slate-600 dark:text-slate-300">
+              <p className="text-sm text-slate-600">
                 Podziel się terminem, który powinien trafić do Śląskiego Słownika Majsterkowego.
               </p>
             </div>
 
-            <section className="space-y-6 p-6 md:p-8 bg-red-200/50 dark:bg-red-900/50">
+            <section className="space-y-6 p-6 md:p-8 bg-red-200/50">
               <div className="space-y-2">
                 <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Podstawowe informacje</h2>
-                <p className="text-sm text-slate-600 dark:text-slate-300">
+                <p className="text-sm text-slate-600">
                   Wprowadź słowo w języku {languageLabel[form.sourceLang].toLowerCase()}m oraz jego tłumaczenie na język {languageLabel[form.targetLang].toLowerCase()}.
                 </p>
               </div>
@@ -295,7 +294,7 @@ export default function AddWordPage() {
                     />
                   )}
                   {form.isSuggestingCategory && (
-                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                    <p className="text-xs text-slate-600">
                       Wpis zostanie oznaczony, że proponujesz nową kategorię – podaj jej nazwę powyżej.
                     </p>
                   )}
@@ -320,7 +319,7 @@ export default function AddWordPage() {
 
             <Separator className={separatorStyles} />
 
-            <section className="space-y-6 p-6 md:p-8 bg-amber-200/50 dark:bg-amber-900/50">
+            <section className="space-y-6 p-6 md:p-8 bg-amber-200/50">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Przykłady użycia</h2>
                 <Button type="button" variant="outline" onClick={addExampleSentence}>
@@ -363,7 +362,7 @@ export default function AddWordPage() {
                       </div>
                     </div>
                     {index < form.exampleSentences.length - 1 && (
-                      <Separator className="h-px w-full bg-slate-900/40 dark:bg-slate-100/40" />
+                      <Separator className="h-px w-full bg-slate-900/40" />
                     )}
                   </div>
                 ))}
@@ -372,7 +371,7 @@ export default function AddWordPage() {
 
             <Separator className={separatorStyles} />
 
-            <section className="space-y-6 p-6 md:p-8 bg-blue-200/50 dark:bg-blue-900/50">
+            <section className="space-y-6 p-6 md:p-8 bg-blue-200/50">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Zasięg występowania</h2>
                 <Button type="button" variant="outline" size="sm" onClick={addLocation}>
@@ -402,10 +401,10 @@ export default function AddWordPage() {
 
             <Separator className={separatorStyles} />
 
-            <section className="space-y-6 p-6 md:p-8 bg-slate-200/50 dark:bg-slate-900/50">
+            <section className="space-y-6 p-6 md:p-8 bg-slate-200/50">
               <div className="space-y-2">
                 <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Informacje kontaktowe (opcjonalnie)</h2>
-                <p className="text-sm text-slate-600 dark:text-slate-300">
+                <p className="text-sm text-slate-600">
                   Dane pozwolą nam skontaktować się w razie pytań dotyczących zgłoszenia.
                 </p>
               </div>
@@ -471,20 +470,7 @@ export default function AddWordPage() {
         </DialogContent>
       </Dialog>
 
-      <footer className="border-t border-slate-300 bg-white/90 text-slate-700 transition-colors dark:border-slate-700 dark:bg-slate-950/90 dark:text-slate-200">
-        <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
-          <div className="flex flex-col gap-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-			<ThemeToggle />
-            <p className="max-w-xl">
-              Projekt współfinansowany ze środków Ministra Kultury i Dziedzictwa Narodowego w ramach programu dotacyjnego „Różnorodność Językowa” Instytutu Różnorodności Językowej Rzeczypospolitej.
-            </p>
-            <div className="flex items-center gap-10">
-              <Image src="/mkdin.svg" alt="Ministerstwo Kultury" width={140} height={48} className="h-10 w-auto dark:invert" />
-              <Image src="/irjr.svg" alt="Instytut Różnorodności Językowej" width={140} height={48} className="h-10 w-auto dark:invert" />
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

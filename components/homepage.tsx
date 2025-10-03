@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -9,7 +8,6 @@ import {
   Sparkles,
   ChevronRight,
   Loader2,
-  Settings,
   ChevronDown,
   List,
   Clock,
@@ -19,9 +17,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import ThemeToggle from '@/components/theme-toggle'
 import { Skeleton } from '@/components/ui/skeleton'
 import AddWordHeader from '@/components/add-word-header'
+import Footer from '@/components/footer'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   Dialog,
@@ -109,7 +107,7 @@ interface SearchResponse {
 }
 
 const fieldFrame =
-  'border border-slate-900 bg-white/80 text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] dark:border-slate-100 dark:bg-slate-900/60 dark:text-slate-100'
+  'border border-slate-900 bg-white/80 text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]'
 const inputField = `w-full rounded-sm text-base ${fieldFrame}`
 
 function mapSearchResult(result: SearchResponse['results'][number]): EntryPreview {
@@ -521,7 +519,7 @@ export default function HomePage({
       <p className="text-2xl font-semibold italic leading-tight text-primary md:text-3xl">
         {sentence.sourceText}
       </p>
-      <p className="text-base leading-relaxed text-slate-700 dark:text-slate-300 md:text-right md:text-lg">
+      <p className="text-base leading-relaxed text-slate-700 md:text-right md:text-lg">
         {sentence.translatedText}
       </p>
     </div>
@@ -535,9 +533,7 @@ export default function HomePage({
         type="button"
         onClick={() => handleCategoryClick(category.slug)}
         className={`flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left transition-colors ${
-          isActive
-            ? 'bg-primary/10 text-primary'
-            : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+          isActive ? 'bg-primary/10 text-primary' : 'hover:bg-slate-100'
         }`}
       >
         <span>{category.name}</span>
@@ -555,7 +551,7 @@ export default function HomePage({
       key={entry.id}
       type="button"
       onClick={() => handleRecentClick(entry)}
-      className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 dark:border-slate-100 transition-colorsdark:text-slate-100 hover:text-primary hover:border-primary"
+      className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 transition-colors hover:text-primary hover:border-primary"
     >
       <span className="inline-block pb-1 transition-colors ">{entry.sourceWord}</span>
       <ChevronRight className="h-4 w-4" />
@@ -569,10 +565,10 @@ export default function HomePage({
         onClick={() => handleSelectEntry(randomEntry)}
         className="w-full cursor-pointer space-y-2 text-left hover:[&>*]:text-primary [&>*]:transition-colors"
       >
-        <p className="text-xl font-medium text-slate-900 dark:text-slate-100">
+        <p className="text-xl font-medium text-slate-900">
           Czy wiesz co po śląsku znaczy
         </p>
-        <p className="text-4xl font-bold text-slate-900 dark:text-slate-100">
+        <p className="text-4xl font-bold text-slate-900">
           {randomEntry.sourceWord}?
         </p>
         <p className="text-right text-sm font-semibold">Sprawdź →</p>
@@ -589,7 +585,7 @@ export default function HomePage({
   )
 
   return (
-    <div className="min-h-screen bg-white bg-[url('/bg-hex.png')] bg-top bg-no-repeat text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen bg-white bg-[url('/bg-hex.png')] bg-top bg-no-repeat text-slate-900 transition-colors">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 md:gap-12 md:py-14 md:flex-row md:gap-20">
         <aside className="md:w-1/3 md:sticky md:top-10">
           <div className="flex flex-col gap-6 pb-6 md:gap-10 md:pb-0">
@@ -606,7 +602,7 @@ export default function HomePage({
                   <CollapsibleTrigger asChild>
                     <button
                       type="button"
-                      className="flex w-full items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary dark:border-slate-100 dark:text-slate-100"
+                      className="flex w-full items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary"
                     >
                       <span className="flex items-center gap-2">
                         <List className="h-4 w-4" />
@@ -626,11 +622,11 @@ export default function HomePage({
               <div className="hidden md:block space-y-3">{addWordButton}</div>
 
               <div className="hidden md:block space-y-3">
-                <h2 className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
+                <h2 className="text-xs uppercase tracking-[0.18em] text-slate-500">
                   Kategorie
                 </h2>
                 <nav
-                  className="space-y-2 text-sm text-slate-900 dark:text-slate-100"
+                  className="space-y-2 text-sm text-slate-900"
                   aria-label={`Kategorie (${stats.totalEntries.toLocaleString('pl-PL')} haseł)`}
                 >
                   {categoryButtons}
@@ -643,21 +639,21 @@ export default function HomePage({
         <main className="md:w-2/3">
           <div className="flex flex-col gap-6">
             <section className="flex flex-wrap items-stretch gap-6 md:mt-4 md:flex-row md:items-start md:justify-between">
-              <p className="text-md min-w-[180px] flex-1 md:max-w-xl font-bold md:text-lg text-slate-900 dark:text-slate-100">
+              <p className="text-md min-w-[180px] flex-1 md:max-w-xl font-bold md:text-lg text-slate-900">
                 Techniczny słownik śląsko-polski rozwijany przez społeczność i ekspertów branżowych.
               </p>
               <div className="min-w-[200px] flex-1">
                 {renderRandomEntryCard() ?? (
-                  <div className="rounded-sm border border-dashed border-slate-900/30 p-4 text-sm text-slate-600 dark:border-slate-100/30 dark:text-slate-300">
+                  <div className="rounded-sm border border-dashed border-slate-900/30 p-4 text-sm text-slate-600">
                     Brak wyróżnionego hasła.
                   </div>
                 )}
               </div>
             </section>
 
-            <Separator className="h-[2px] bg-slate-900 dark:bg-slate-100" />
+            <Separator className="h-[2px] bg-slate-900" />
 
-            <section className="space-y-3 rounded-sm bg-red-200/50 p-6 md:p-8 dark:bg-red-900/40">
+            <section className="space-y-3 rounded-sm bg-red-200/50 p-6 md:p-8">
               <div className="space-y-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
@@ -672,7 +668,7 @@ export default function HomePage({
                   )}
                 </div>
                 {(suggestions.length > 0 || searchError || isFetchingSuggestions) && (
-                  <div className="max-h-64 overflow-y-auto rounded-md border border-slate-900/20 bg-white/90 shadow-lg dark:border-slate-100/20 dark:bg-slate-900/90">
+                  <div className="max-h-64 overflow-y-auto rounded-md border border-slate-900/20 bg-white/90 shadow-lg">
                     {isFetchingSuggestions && suggestions.length === 0 && !searchError ? (
                       <div className="space-y-3 p-4">
                         <Skeleton className="h-4 w-2/5" />
@@ -688,16 +684,14 @@ export default function HomePage({
                             type="button"
                             onMouseDown={event => event.preventDefault()}
                             onClick={() => handleSuggestionClick(entry)}
-                            className={`flex w-full items-center justify-between border-b border-slate-900/10 px-3 py-2 text-left text-sm transition-colors last:border-b-0 dark:border-slate-100/10 ${
-                              isActive
-                                ? 'bg-primary/10 text-primary'
-                                : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                            className={`flex w-full items-center justify-between border-b border-slate-900/10 px-3 py-2 text-left text-sm transition-colors last:border-b-0 ${
+                              isActive ? 'bg-primary/10 text-primary' : 'hover:bg-slate-100'
                             }`}
                           >
-                            <span className="font-medium text-slate-900 dark:text-slate-100">
-                              <span className="inline-block border-b-2 border-slate-900/30 pb-1 transition-colors dark:border-slate-100/30">{entry.sourceWord}</span>
+                            <span className="font-medium text-slate-900">
+                              <span className="inline-block border-b-2 border-slate-900/30 pb-1 transition-colors">{entry.sourceWord}</span>
                             </span>
-                            <span className="text-xs text-slate-500 dark:text-slate-300">
+                            <span className="text-xs text-slate-500">
                               → {entry.targetWord}
                             </span>
                           </button>
@@ -705,7 +699,7 @@ export default function HomePage({
                       })
                     )}
                     {searchError && suggestions.length === 0 && (
-                      <p className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
+                      <p className="px-4 py-3 text-sm text-slate-600">
                         {searchError}
                       </p>
                     )}
@@ -720,7 +714,7 @@ export default function HomePage({
                       <CollapsibleTrigger asChild>
                         <button
                           type="button"
-                          className="flex w-full items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary dark:border-slate-100 dark:text-slate-100"
+                          className="flex w-full items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary"
                         >
                           <span className="flex items-center gap-2">
                             <Clock className="h-4 w-4" />
@@ -738,7 +732,7 @@ export default function HomePage({
                   </div>
 
                   <div className="hidden md:block space-y-2">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                       Ostatnio dodane hasła
                     </p>
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -752,7 +746,7 @@ export default function HomePage({
             {!activeCategory && (selectedEntry || isEntryLoading) && (
               <section
                 ref={entrySectionRef}
-                className="space-y-6 rounded-sm bg-amber-200/50 p-6 md:p-8 dark:bg-amber-900/50"
+                className="space-y-6 rounded-sm bg-amber-200/50 p-6 md:p-8"
               >
                 {isEntryLoading && !selectedEntry ? (
                   <div className="space-y-6">
@@ -768,13 +762,13 @@ export default function HomePage({
                         <Skeleton className="h-3 w-1/4 md:ml-auto" />
                       </div>
                     </div>
-                    <div className="h-px w-full bg-slate-900/20 dark:bg-slate-100/20" />
+                    <div className="h-px w-full bg-slate-900/20" />
                     <div className="space-y-3">
                       <Skeleton className="h-5 w-4/5" />
                       <Skeleton className="h-5 w-3/5" />
                       <Skeleton className="h-5 w-2/5" />
                     </div>
-                    <div className="h-px w-full bg-slate-900/20 dark:bg-slate-100/20" />
+                    <div className="h-px w-full bg-slate-900/20" />
                     <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
                       <Skeleton className="h-20 w-full" />
                       <Skeleton className="h-10 w-full" />
@@ -788,12 +782,12 @@ export default function HomePage({
                           {selectedEntry.sourceWord}
                         </h3>
                         {selectedEntry.pronunciation && (
-                          <p className="text-lg font-mono text-slate-600 dark:text-slate-300">
+                          <p className="text-lg font-mono text-slate-600">
                             [{selectedEntry.pronunciation}]
                           </p>
                         )}
                         {selectedEntry.partOfSpeech && (
-                          <p className="text-xs font-bold uppercase text-slate-900 dark:text-slate-100">
+                          <p className="text-xs font-bold uppercase text-slate-900">
                             {selectedEntry.partOfSpeech}
                           </p>
                         )}
@@ -803,42 +797,42 @@ export default function HomePage({
                           translations.map(translation => (
                             <p
                               key={translation}
-                              className="text-3xl font-semibold leading-tight text-slate-900 dark:text-slate-100 md:text-4xl"
+                              className="text-3xl font-semibold leading-tight text-slate-900 md:text-4xl"
                             >
                               {translation}
                             </p>
                           ))
                         ) : (
-                          <p className="text-base text-slate-700 dark:text-slate-300">
+                          <p className="text-base text-slate-700">
                             Brak tłumaczeń.
                           </p>
                         )}
                       </div>
                     </div>
 
-                    <Separator className="h-px bg-slate-900/20 dark:bg-slate-100/20" />
+                    <Separator className="h-px bg-slate-900/20" />
 
                     <div className="space-y-4">
                       {selectedEntry.exampleSentences.length > 0 ? (
                         selectedEntry.exampleSentences.map(renderExampleSentence)
                       ) : (
-                        <p className="text-sm text-slate-600 dark:text-slate-300">
+                        <p className="text-sm text-slate-600">
                           Brak przykładów użycia dla tego hasła.
                         </p>
                       )}
                     </div>
 
-                    <Separator className="h-px bg-slate-900/20 dark:bg-slate-100/20" />
+                    <Separator className="h-px bg-slate-900/20" />
 
                     <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
-                      <div className="text-md text-slate-900 dark:text-slate-100">
+                      <div className="text-md text-slate-900">
                         {selectedEntry.notes ?? 'Brak dodatkowych notatek.'}
                       </div>
                       <div className="flex justify-end">
                         <button
                           type="button"
                           onClick={() => handleCategoryClick(selectedEntry.category.slug)}
-                          className="inline-flex items-center gap-2 rounded-sm border border-slate-900 px-3 py-1 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary dark:border-slate-100 dark:text-slate-100 dark:hover:border-primary"
+                          className="inline-flex items-center gap-2 rounded-sm border border-slate-900 px-3 py-1 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary"
                         >
                           <span>{selectedEntry.category.name}</span>
                           <ChevronRight className="h-4 w-4" />
@@ -847,7 +841,7 @@ export default function HomePage({
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-sm border border-dashed border-slate-900/30 p-6 text-sm text-slate-600 dark:border-slate-100/30 dark:text-slate-300">
+                  <div className="rounded-sm border border-dashed border-slate-900/30 p-6 text-sm text-slate-600">
                     Brak wybranego wpisu. Zacznij wpisywać słowo lub wybierz je z listy powyżej.
                   </div>
                 )}
@@ -857,7 +851,7 @@ export default function HomePage({
             {activeCategory && (
               <section
                 ref={categorySectionRef}
-                className="space-y-4 rounded-sm bg-slate-200/50 p-6 md:p-8 dark:bg-slate-900/50"
+                className="space-y-4 rounded-sm bg-slate-200/50 p-6 md:p-8"
               >
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">
@@ -877,7 +871,7 @@ export default function HomePage({
                         key={entry.id}
                         type="button"
                         onClick={() => handleSelectEntry(entry)}
-                        className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 dark:border-slate-100 transition-colors dark:text-slate-100 hover:text-primary hover:border-primary"
+                        className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 transition-colors hover:text-primary hover:border-primary"
                       >
                         <span className="inline-block pb-1">
                           {entry.sourceWord}
@@ -887,19 +881,19 @@ export default function HomePage({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                  <p className="text-sm text-slate-600">
                     {categoryError ?? 'Brak haseł w wybranej kategorii.'}
                   </p>
                 )}
               </section>
             )}
 
-            <section className="space-y-5 mt-5 text-slate-900 dark:text-slate-100">
+            <section className="space-y-5 mt-5 text-slate-900">
               <header className="space-y-3">
                 <h2 className="text-2xl font-semibold">
                   Na czym polega projekt „Śląski słownik majsterkowy”
                 </h2>
-                <p className="text-base leading-relaxed text-slate-700 dark:text-slate-300">
+                <p className="text-base leading-relaxed text-slate-700">
                   Nasz projekt łączy tradycję gwary śląskiej z majsterkowaniem i edukacją techniczną. Chcemy pokazać,
                   że gwara jest żywa i może być inspirującym narzędziem do nauki.
                 </p>
@@ -908,11 +902,11 @@ export default function HomePage({
               <div className="space-y-6">
                 <div className="space-y-3">
                   <h3 className="text-xl font-semibold uppercase">Co planujemy?</h3>
-                  <ul className="space-y-3 text-base leading-relaxed text-slate-700 dark:text-slate-300">
+                  <ul className="space-y-3 text-base leading-relaxed text-slate-700">
                     <li className="flex items-start gap-3">
                       <Hammer className="mt-1 h-5 w-5 text-primary" />
                       <span>
-                        stworzenie śląskiego słownika majsterkowego – katalogu słów związanych z techniką, narzędziami i
+                        stworzenie śląskiego słownika majsterkowego - katalogu słów związanych z techniką, narzędziami i
                         wynalazczością. Słownik powstanie wspólnie z mieszkańcami Śląska poprzez narzędzie online, a
                         następnie zostanie wydany w formie drukowanej,
                       </span>
@@ -936,13 +930,13 @@ export default function HomePage({
 
                 <div className="space-y-3">
                   <h3 className="text-xl font-semibold uppercase">Rezultat projektu</h3>
-                  <p className="text-base leading-relaxed text-slate-700 dark:text-slate-300">
+                  <p className="text-base leading-relaxed text-slate-700">
                     Powstaną trzy publikacje: dwa zeszyty inspiracyjne i metodyczne oraz ilustrowany słownik majsterkowy z
                     co najmniej 50 hasłami.
                   </p>
                 </div>
 
-                <p className="text-base leading-relaxed text-slate-700 dark:text-slate-300">
+                <p className="text-base leading-relaxed text-slate-700">
                   Dzięki wspólnej pracy nad słownikiem i warsztatom mieszkańcy Śląska w różnym wieku będą mogli aktywnie
                   włączyć się w ochronę i rozwój gwary – w nowoczesnej, twórczej formie.
                 </p>
@@ -969,7 +963,7 @@ export default function HomePage({
                   id="admin-email"
                   value={adminCredentials.email}
                   readOnly
-                  className="border-slate-300 dark:border-slate-700"
+                  className="border-slate-300"
                 />
               </div>
               <div className="space-y-1">
@@ -979,12 +973,12 @@ export default function HomePage({
                   type="password"
                   value={adminCredentials.password}
                   readOnly
-                  className="border-slate-300 dark:border-slate-700"
+                  className="border-slate-300"
                 />
               </div>
             </div>
           ) : (
-            <div className="space-y-3 py-4 text-sm text-slate-600 dark:text-slate-300">
+            <div className="space-y-3 py-4 text-sm text-slate-600">
               <p>
                 Aby uzyskać dostęp do panelu moderatora, użyj swoich danych logowania. Jeśli ich nie posiadasz,
                 skontaktuj się z administratorem projektu.
@@ -1005,49 +999,7 @@ export default function HomePage({
         </DialogContent>
       </Dialog>
 
-      <footer className="border-t border-slate-300 bg-white/90 text-slate-700 transition-colors dark:border-slate-700 dark:bg-slate-950/90 dark:text-slate-200">
-        <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Panel administratora"
-              onClick={() => setIsAdminDialogOpen(true)}
-              className="h-10 w-10 rounded-full border border-slate-900 bg-white/80 text-slate-900 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] dark:border-slate-100 dark:bg-slate-900/60 dark:text-slate-100"
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
-            <ThemeToggle />
-          </div>
-
-          <div className="flex flex-col gap-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-            <p className="max-w-xl">
-              Projekt współfinansowany ze środków Ministra Kultury i Dziedzictwa Narodowego w ramach programu dotacyjnego „Różnorodność Językowa” Instytutu Różnorodności Językowej Rzeczypospolitej.
-            </p>
-            <div className="flex items-center gap-10">
-              <Image
-                src="/mkdin.svg"
-                alt="Ministerstwo Kultury"
-                width={140}
-                height={48}
-                className="h-10 w-auto dark:invert"
-              />
-              <Image
-                src="/irjr.svg"
-                alt="Instytut Różnorodności Językowej"
-                width={140}
-                height={48}
-                className="h-10 w-auto dark:invert"
-              />
-            </div>
-          </div>
-
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-            © {new Date().getFullYear()} Śląski Słownik Majsterkowy • Współtworzony przez Warsztat Miejski i społeczność regionu
-          </p>
-        </div>
-      </footer>
+      <Footer onOpenAdminDialog={() => setIsAdminDialogOpen(true)} />
     </div>
   )
 }

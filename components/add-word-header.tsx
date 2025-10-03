@@ -10,7 +10,7 @@ export default function AddWordHeader() {
 		  width={216}
 		  height={200}
 		  priority
-		  className="h-48 w-auto dark:invert md:h-auto md:w-full"
+		  className="h-48 w-auto md:h-auto md:w-full"
 		/>
 		<div className="flex flex-col items-end gap-6 md:gap-8">
 		  <a
@@ -24,7 +24,7 @@ export default function AddWordHeader() {
 			  alt="Nowe ZPT"
 			  width={100}
 			  height={140}
-			  className="h-auto w-16 dark:invert md:w-24"
+			  className="h-auto w-16 md:w-24"
 			/>
 		  </a>
 		  <a
@@ -38,7 +38,7 @@ export default function AddWordHeader() {
 			  alt="Warsztat Miejski"
 			  width={100}
 			  height={100}
-			  className="h-auto w-16 dark:invert md:w-24"
+			  className="h-auto w-16 md:w-24"
 			/>
 		  </a>
 		</div>
