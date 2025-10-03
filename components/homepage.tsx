@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Loader2,
   Hammer,
+  ChevronLeft,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 
 export type LanguageCode = 'SILESIAN' | 'POLISH'
 
@@ -155,6 +157,7 @@ export default function HomePage({
   const [categoryError, setCategoryError] = useState<string | null>(null)
   const [isFetchingCategory, setIsFetchingCategory] = useState(false)
   const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false)
+  const [isCategoryView, setIsCategoryView] = useState(false)
   const lastCategorySlugRef = useRef<string | null>(null)
   const categorySectionRef = useRef<HTMLElement | null>(null)
   const entrySectionRef = useRef<HTMLElement | null>(null)
@@ -187,6 +190,14 @@ export default function HomePage({
   const activeCategoryData = useMemo(
     () => categories.find(category => category.slug === activeCategory) || null,
     [categories, activeCategory],
+  )
+
+  const sortedCategoryEntries = useMemo(
+    () =>
+      categoryEntries
+        .slice()
+        .sort((a, b) => a.sourceWord.localeCompare(b.sourceWord, 'pl', { sensitivity: 'base' })),
+    [categoryEntries],
   )
 
   const translations = useMemo(() => {
@@ -257,7 +268,6 @@ export default function HomePage({
 
   const handleRecentClick = (entry: EntryPreview) => {
     handleSelectEntry(entry)
-    setIsRecentMenuOpen(false)
   }
 
   const loadSuggestions = useCallback(
@@ -345,16 +355,21 @@ export default function HomePage({
       setCategoryEntries([])
       setPendingCategoryFetch(nextCategory)
       updateUrlWithCategory(nextCategory)
+      setIsCategoryView(true)
       scrollToCategory()
     } else {
-      setActiveCategory(null)
-      setPendingCategoryFetch(null)
-      setCategoryEntries([])
-      setCategoryError(null)
-      setIsFetchingCategory(false)
-      updateUrlWithCategory(null)
+      handleCategoryReset()
     }
-    setIsCategoryMenuOpen(false)
+  }
+
+  const handleCategoryReset = () => {
+    setIsCategoryView(false)
+    setActiveCategory(null)
+    setCategoryEntries([])
+    setCategoryError(null)
+    setIsFetchingCategory(false)
+    setPendingCategoryFetch(null)
+    updateUrlWithCategory(null)
   }
 
   useEffect(() => {
@@ -412,6 +427,7 @@ export default function HomePage({
       setCategoryError(null)
       setIsFetchingCategory(false)
       setPendingCategoryFetch(null)
+      setIsCategoryView(false)
       return
     }
 
@@ -431,6 +447,7 @@ export default function HomePage({
     setCategoryEntries([])
     setCategoryError(null)
     setPendingCategoryFetch(categorySlug)
+    setIsCategoryView(true)
 
     loadSuggestions({ category: categorySlug, signal: controller.signal, mode: 'category' })
       .finally(() => {
@@ -547,10 +564,10 @@ export default function HomePage({
         onClick={() => handleSelectEntry(randomEntry)}
         className="w-full cursor-pointer space-y-2 text-left hover:[&>*]:text-primary [&>*]:transition-colors"
       >
-        <p className="text-xl font-medium text-slate-900">
+        <p className="text-md md:text-xl font-medium text-slate-900">
           Czy wiesz co po śląsku znaczy
         </p>
-        <p className="text-4xl font-bold text-slate-900">
+        <p className="text-2xl md:text-4xl font-bold text-slate-900">
           {randomEntry.sourceWord}?
         </p>
         <p className="text-right text-sm font-semibold">Sprawdź →</p>
@@ -566,8 +583,50 @@ export default function HomePage({
     </Button>
   )
 
+  const renderCategoryEntriesSection = () => (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={handleCategoryReset}
+          className="flex items-center gap-2 text-sm font-semibold text-slate-900 transition-colors hover:text-primary"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span>{activeCategoryData ? activeCategoryData.name : 'Kategorie'}</span>
+        </button>
+        {activeCategoryData?.description && (
+          <p className="text-xs text-slate-500">{activeCategoryData.description}</p>
+        )}
+      </div>
+
+      {isFetchingCategory && sortedCategoryEntries.length === 0 ? (
+        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="h-8 w-full" />
+          ))}
+        </div>
+      ) : sortedCategoryEntries.length > 0 ? (
+        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+          {sortedCategoryEntries.map(entry => (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => handleSelectEntry(entry)}
+              className="flex items-center justify-between border-b border-slate-900 py-2 text-left text-sm text-slate-900 transition-colors hover:border-primary hover:text-primary"
+            >
+              <span className="font-medium">{entry.sourceWord}</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-slate-500">{categoryError ?? 'Brak haseł w tej kategorii.'}</p>
+      )}
+    </div>
+  )
+
   return (
-    <div className="min-h-screen bg-white bg-[url('/bg-hex.png')] bg-top bg-no-repeat text-slate-900 transition-colors">
+    <div className="min-h-screen bg-white bg-[url('/bg-hex-2.png')] bg-top bg-no-repeat text-slate-900 transition-colors">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 md:gap-12 md:py-14 md:flex-row md:gap-20">
         <aside className="md:w-1/3 md:sticky md:top-10">
           <div className="flex flex-col gap-6 pb-6 md:gap-10 md:pb-0">
@@ -584,13 +643,14 @@ export default function HomePage({
 
         <main className="md:w-2/3">
           <div className="flex flex-col gap-6">
-            <section className="flex flex-wrap items-stretch gap-6 md:mt-4 md:flex-row md:items-start md:justify-between">
+
+            <section className="flex flex-wrap items-stretch gap-6 md:mt-2 md:flex-row md:items-start md:justify-between">
               <p className="text-lg min-w-[180px] flex-1 md:max-w-xl font-bold md:text-2xl text-slate-900">
                 Techniczny słownik śląsko-polski rozwijany przez społeczność i ekspertów branżowych.
               </p>
             </section>
 
-            <section className="space-y-3 rounded-sm bg-orange-200/50 p-6 md:p-8">
+            <section className="space-y-6 bg-accent/75 p-6 md:p-8">
               <div className="space-y-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
@@ -646,166 +706,134 @@ export default function HomePage({
 
               <div className="space-y-2">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                  Kategorie ({stats.totalEntries.toLocaleString('pl-PL')} haseł)
+                  {isCategoryView && activeCategoryData
+                    ? `Kategoria: ${activeCategoryData.name}`
+                    : `Kategorie (${stats.totalEntries.toLocaleString('pl-PL')} haseł)`}
                 </p>
-                <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-                  {categoryButtons}
+                <div className="relative overflow-hidden">
+                  <div
+                    className={cn(
+                      'transition-all duration-300',
+                      isCategoryView ? 'pointer-events-none absolute inset-0 translate-x-[-105%] opacity-0' : 'relative translate-x-0 opacity-100',
+                    )}
+                  >
+                    <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">{categoryButtons}</div>
+                  </div>
+                  <div
+                    className={cn(
+                      'transition-all duration-300',
+                      isCategoryView ? 'relative translate-x-0 opacity-100' : 'pointer-events-none absolute inset-0 translate-x-[105%] opacity-0',
+                    )}
+                  >
+                    {renderCategoryEntriesSection()}
+                  </div>
                 </div>
               </div>
             </section>
 
-            {!activeCategory && (selectedEntry || isEntryLoading) && (
-              <section
-                ref={entrySectionRef}
-                className="space-y-6 rounded-sm bg-amber-200/50 p-6 md:p-8"
-              >
-                {isEntryLoading && !selectedEntry ? (
-                  <div className="space-y-6">
-                    <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-end">
-                      <div className="space-y-3">
-                        <Skeleton className="h-12 w-3/4" />
-                        <Skeleton className="h-4 w-1/3" />
-                        <Skeleton className="h-3 w-1/4" />
-                      </div>
-                      <div className="space-y-3 md:text-right">
-                        <Skeleton className="h-12 w-2/3 md:ml-auto" />
-                        <Skeleton className="h-3 w-1/3 md:ml-auto" />
-                        <Skeleton className="h-3 w-1/4 md:ml-auto" />
-                      </div>
-                    </div>
-                    <div className="h-px w-full bg-slate-900/20" />
+            <section
+              ref={entrySectionRef}
+              className="bg-accent/75 p-6 md:p-8"
+            >
+              {isEntryLoading && !selectedEntry ? (
+                <div className="space-y-6">
+                  <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-end">
                     <div className="space-y-3">
-                      <Skeleton className="h-5 w-4/5" />
-                      <Skeleton className="h-5 w-3/5" />
-                      <Skeleton className="h-5 w-2/5" />
+                      <Skeleton className="h-12 w-3/4" />
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-3 w-1/4" />
                     </div>
-                    <div className="h-px w-full bg-slate-900/20" />
-                    <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
-                      <Skeleton className="h-20 w-full" />
-                      <Skeleton className="h-10 w-full" />
+                    <div className="space-y-3 md:text-right">
+                      <Skeleton className="h-12 w-2/3 md:ml-auto" />
+                      <Skeleton className="h-3 w-1/3 md:ml-auto" />
+                      <Skeleton className="h-3 w-1/4 md:ml-auto" />
                     </div>
                   </div>
-                ) : selectedEntry ? (
-                  <div className="space-y-6">
-                    <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
-                      <div className="space-y-2">
-                        <h3 className="text-5xl font-semibold leading-tight text-primary mb-4 md:text-6xl">
-                          {selectedEntry.sourceWord}
-                        </h3>
-                        {selectedEntry.pronunciation && (
-                          <p className="text-lg font-mono text-slate-600">
-                            [{selectedEntry.pronunciation}]
-                          </p>
-                        )}
-                        {selectedEntry.partOfSpeech && (
-                          <p className="text-xs font-bold uppercase text-slate-900">
-                            {selectedEntry.partOfSpeech}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-2 text-right">
-                        {translations.length > 0 ? (
-                          translations.map(translation => (
-                            <p
-                              key={translation}
-                              className="text-3xl font-semibold leading-tight text-slate-900 md:text-4xl"
-                            >
-                              {translation}
-                            </p>
-                          ))
-                        ) : (
-                          <p className="text-base text-slate-700">
-                            Brak tłumaczeń.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <Separator className="h-px bg-slate-900/20" />
-
-                    <div className="space-y-4">
-                      {selectedEntry.exampleSentences.length > 0 ? (
-                        selectedEntry.exampleSentences.map(renderExampleSentence)
-                      ) : (
-                        <p className="text-sm text-slate-600">
-                          Brak przykładów użycia dla tego hasła.
+                  <div className="h-px w-full bg-slate-900/20" />
+                  <div className="space-y-3">
+                    <Skeleton className="h-5 w-4/5" />
+                    <Skeleton className="h-5 w-3/5" />
+                    <Skeleton className="h-5 w-2/5" />
+                  </div>
+                  <div className="h-px w-full bg-slate-900/20" />
+                  <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </div>
+              ) : selectedEntry ? (
+                <div className="space-y-6">
+                  <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
+                    <div className="space-y-2">
+                      <h3 className="mb-4 text-5xl font-semibold leading-tight text-primary md:text-6xl">
+                        {selectedEntry.sourceWord}
+                      </h3>
+                      {selectedEntry.pronunciation && (
+                        <p className="text-lg font-mono text-slate-600">
+                          [{selectedEntry.pronunciation}]
+                        </p>
+                      )}
+                      {selectedEntry.partOfSpeech && (
+                        <p className="text-xs font-bold uppercase text-slate-900">
+                          {selectedEntry.partOfSpeech}
                         </p>
                       )}
                     </div>
-
-                    <Separator className="h-px bg-slate-900/20" />
-
-                    <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
-                      <div className="text-md text-slate-900">
-                        {selectedEntry.notes ?? 'Brak dodatkowych notatek.'}
-                      </div>
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => handleCategoryClick(selectedEntry.category.slug)}
-                          className="inline-flex items-center gap-2 rounded-sm border border-slate-900 px-3 py-1 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary"
-                        >
-                          <span>{selectedEntry.category.name}</span>
-                          <ChevronRight className="h-4 w-4" />
-                        </button>
-                      </div>
+                    <div className="flex flex-col items-end gap-2 text-right">
+                      {translations.length > 0 ? (
+                        translations.map(translation => (
+                          <p key={translation} className="text-3xl font-semibold leading-tight text-slate-900 md:text-4xl">
+                            {translation}
+                          </p>
+                        ))
+                      ) : (
+                        <p className="text-base text-slate-700">Brak tłumaczeń.</p>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  <div className="rounded-sm border border-dashed border-slate-900/30 p-6 text-sm text-slate-600">
-                    Brak wybranego wpisu. Zacznij wpisywać słowo lub wybierz je z listy powyżej.
-                  </div>
-                )}
-              </section>
-            )}
 
-            {activeCategory && (
-              <section
-                ref={categorySectionRef}
-                className="space-y-4 rounded-sm bg-slate-200/50 p-6 md:p-8"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                    <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">
-                      Hasła w kategorii {activeCategoryData ? activeCategoryData.name : activeCategory}
-                    </h2>
-                </div>
-                {isFetchingCategory && categoryEntries.length === 0 ? (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {Array.from({ length: 6 }).map((_, index) => (
-                      <Skeleton key={index} className="h-8 w-full" />
-                    ))}
+                  <Separator className="h-px bg-slate-900/20" />
+
+                  <div className="space-y-4">
+                    {selectedEntry.exampleSentences.length > 0 ? (
+                      selectedEntry.exampleSentences.map(renderExampleSentence)
+                    ) : (
+                      <p className="text-sm text-slate-600">Brak przykładów użycia dla tego hasła.</p>
+                    )}
                   </div>
-                ) : categoryEntries.length > 0 ? (
-                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {categoryEntries.map(entry => (
+
+                  <Separator className="h-px bg-slate-900/20" />
+
+                  <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
+                    <div className="text-sm text-slate-700">
+                      {selectedEntry.notes ?? 'Brak dodatkowych notatek.'}
+                    </div>
+                    <div className="flex justify-end">
                       <button
-                        key={entry.id}
                         type="button"
-                        onClick={() => handleSelectEntry(entry)}
-                        className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 transition-colors hover:text-primary hover:border-primary"
+                        onClick={() => handleCategoryClick(selectedEntry.category.slug)}
+                        className="inline-flex items-center gap-2 rounded-sm border border-slate-900 px-3 py-1 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary"
                       >
-                        <span className="inline-block pb-1">
-                          {entry.sourceWord}
-                        </span>
+                        <span>{selectedEntry.category.name}</span>
                         <ChevronRight className="h-4 w-4" />
                       </button>
-                    ))}
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-sm text-slate-600">
-                    {categoryError ?? 'Brak haseł w wybranej kategorii.'}
-                  </p>
-                )}
-              </section>
-            )}
+                </div>
+              ) : (
+                <div className="rounded-sm border border-dashed border-slate-900/30 p-6 text-sm text-slate-600">
+                  Brak wybranego wpisu. Zacznij wpisywać słowo lub wybierz je z listy powyżej.
+                </div>
+              )}
+            </section>
 
             <Separator className="h-[2px] bg-slate-900" />
 
-            <section className="rounded-sm bg-amber-100/80 p-6">
+            <section className="p-0">
               <div className="space-y-4 md:flex md:items-start md:justify-between md:space-y-0">
                 <div className="space-y-4 md:w-1/2 md:pr-6">
-                  <h2 className="text-xl font-semibold">
-                    Pomóż nam rozwijać śląski słownik majsterkowy!
+                  <h2 className="text-2xl font-bold">
+                    Pomóż nam rozwijać słownik!
                   </h2>
                   <p className="text-sm text-slate-600">
                     Znasz śląskie słowo, które powinno się tu znaleźć? Zapraszamy do dodania go do naszego słownika. Kliknij ponizej aby przejść do formularza.
@@ -837,9 +865,11 @@ export default function HomePage({
               </div>
             </section>
 
-            <section className="space-y-5 mt-5 text-slate-900">
+            <Separator className="h-[2px] bg-slate-900" />
+
+            <section className="space-y-5 text-slate-900">
               <header className="space-y-3">
-                <h2 className="text-2xl font-semibold">
+                <h2 className="text-2xl font-bold">
                   Na czym polega projekt „Śląski słownik majsterkowy”
                 </h2>
                 <p className="text-base leading-relaxed text-slate-700">
