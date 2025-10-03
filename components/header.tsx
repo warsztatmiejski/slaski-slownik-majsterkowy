@@ -1,17 +1,20 @@
 import Image from 'next/image'
+import Link from 'next/link'
 
-export default function AddWordHeader() {
+export default function Header() {
   return (
 	<div className="flex h-full flex-col gap-12">
 	  <div className="flex flex-row items-start justify-between gap-6 md:flex-col md:items-end">
-		<Image
-		  src="/ssm.svg"
-		  alt="Śląski Słownik Majsterkowy"
-		  width={216}
-		  height={200}
-		  priority
-		  className="h-48 w-auto md:h-auto md:w-full"
-		/>
+		<Link href="/" className="block w-auto md:w-full transition-opacity hover:opacity-90">
+		  <Image
+			src="/ssm.svg"
+			alt="Śląski Słownik Majsterkowy"
+			width={216}
+			height={200}
+			priority
+			className="h-48 w-auto max-w-full object-contain md:h-auto md:w-full"
+		  />
+		</Link>
 		<div className="flex flex-col items-end gap-6 md:gap-8">
 		  <a
 			href="https://warsztatmiejski.org/nowezpt"

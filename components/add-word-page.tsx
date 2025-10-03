@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
-import AddWordHeader from '@/components/add-word-header'
+import Header from '@/components/header'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,11 +18,6 @@ interface ExampleSentence {
   translatedText: string
 }
 
-interface LocationArea {
-  id: string
-  name: string
-}
-
 interface SubmissionForm {
   sourceWord: string
   sourceLang: 'SILESIAN' | 'POLISH'
@@ -32,9 +27,6 @@ interface SubmissionForm {
   categoryId: string
   partOfSpeech: string
   exampleSentences: ExampleSentence[]
-  locations: LocationArea[]
-  submitterName: string
-  submitterEmail: string
   notes: string
   newCategoryName: string
   isSuggestingCategory: boolean
@@ -85,9 +77,6 @@ export default function AddWordPage() {
     categoryId: '',
     partOfSpeech: '',
     exampleSentences: [{ id: '1', sourceText: '', translatedText: '' }],
-    locations: [{ id: '1', name: '' }],
-    submitterName: '',
-    submitterEmail: '',
     notes: '',
     newCategoryName: '',
     isSuggestingCategory: false,
@@ -129,33 +118,6 @@ export default function AddWordPage() {
     }))
   }
 
-  const addLocation = () => {
-    const newLocation: LocationArea = {
-      id: Date.now().toString(),
-      name: '',
-    }
-    setForm(prev => ({
-      ...prev,
-      locations: [...prev.locations, newLocation],
-    }))
-  }
-
-  const removeLocation = (id: string) => {
-    if (form.locations.length > 1) {
-      setForm(prev => ({
-        ...prev,
-        locations: prev.locations.filter(location => location.id !== id),
-      }))
-    }
-  }
-
-  const updateLocation = (id: string, value: string) => {
-    setForm(prev => ({
-      ...prev,
-      locations: prev.locations.map(location => (location.id === id ? { ...location, name: value } : location)),
-    }))
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -186,9 +148,9 @@ export default function AddWordPage() {
 
   return (
     <div className="min-h-screen bg-white bg-[url('/bg-hex.png')] bg-top bg-no-repeat text-slate-900 transition-colors">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-12 px-4 py-14 md:flex-row md:gap-20">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-12 px-4 py-14 md:flex-row">
         <aside className="md:w-1/3 md:sticky md:top-10">
-          <AddWordHeader />
+          <Header />
         </aside>
 
         <main className="md:w-2/3">
@@ -371,68 +333,15 @@ export default function AddWordPage() {
 
             <Separator className={separatorStyles} />
 
-            <section className="space-y-6 p-6 md:p-8 bg-blue-200/50">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Zasięg występowania</h2>
-                <Button type="button" variant="outline" size="sm" onClick={addLocation}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Dodaj lokalizację
-                </Button>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                {form.locations.map((location, index) => (
-                  <div key={location.id} className="flex items-center gap-2">
-                    <Input
-                      value={location.name}
-                      onChange={e => updateLocation(location.id, e.target.value)}
-                      placeholder={index === 0 ? 'np. Katowice' : 'Dodaj kolejną lokalizację'}
-                      className={inputField}
-                      aria-label="Nazwa miejscowości"
-                    />
-                    {form.locations.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeLocation(location.id)} className="h-10 w-10">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <Separator className={separatorStyles} />
-
             <section className="space-y-6 p-6 md:p-8 bg-slate-200/50">
               <div className="space-y-2">
-                <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Informacje kontaktowe (opcjonalnie)</h2>
+                <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Informacje dodatkowe (opcjonalnie)</h2>
                 <p className="text-sm text-slate-600">
-                  Dane pozwolą nam skontaktować się w razie pytań dotyczących zgłoszenia.
+                  Jeśli chcesz, dodaj uwagi dotyczące zgłaszanego słowa.
                 </p>
               </div>
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="submitterName">Imię i nazwisko</Label>
-                  <Input
-                    id="submitterName"
-                    value={form.submitterName}
-                    onChange={e => setForm(prev => ({ ...prev, submitterName: e.target.value }))}
-                    placeholder="Jan Kowalski"
-                    className={inputField}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="submitterEmail">Adres email</Label>
-                  <Input
-                    id="submitterEmail"
-                    type="email"
-                    value={form.submitterEmail}
-                    onChange={e => setForm(prev => ({ ...prev, submitterEmail: e.target.value }))}
-                    placeholder="jan@przyklad.pl"
-                    className={inputField}
-                  />
-                </div>
-              </div>
               <div className="space-y-2">
-                <Label htmlFor="notes">Dodatkowe uwagi</Label>
+                <Label htmlFor="notes">Uwagi</Label>
                 <Textarea
                   id="notes"
                   value={form.notes}

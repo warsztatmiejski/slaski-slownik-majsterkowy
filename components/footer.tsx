@@ -22,20 +22,15 @@ export default function Footer({ onOpenAdminDialog }: FooterProps) {
 
         <div className="flex flex-wrap items-center justify-between gap-4 text-xs uppercase tracking-[0.18em] text-slate-500">
           <span>&#169; 2025 Warsztat Miejski</span>
-          <div className="flex items-center gap-4">
-            <Link href="/polityka-prywatnosci" className="hover:text-primary">
-              Polityka prywatności
-            </Link>
-            {onOpenAdminDialog && (
-              <button
-                type="button"
-                onClick={onOpenAdminDialog}
-                className="font-medium hover:text-primary"
-              >
-                ADMIN
-              </button>
-            )}
-          </div>
+          {onOpenAdminDialog && (
+            <button
+              type="button"
+              onClick={onOpenAdminDialog}
+              className="font-medium hover:text-primary"
+            >
+              ADMIN
+            </button>
+          )}
         </div>
       </div>
     </footer>

@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import AddWordHeader from '@/components/add-word-header'
+import Header from '@/components/header'
 import Footer from '@/components/footer'
 import {
   Dialog,
@@ -366,7 +366,6 @@ export default function HomePage({
       setSearchError(null)
       setCategoryError(null)
       setIsFetchingSuggestions(false)
-      setSelectedEntry(null)
       setCategoryEntries([])
       setPendingCategoryFetch(nextCategory)
       updateUrlWithCategory(nextCategory)
@@ -448,7 +447,6 @@ export default function HomePage({
     setSearchTerm('')
     setSuggestions([])
     setSearchError(null)
-    setSelectedEntry(null)
     setIsFetchingSuggestions(false)
     setCategoryEntries([])
     setCategoryError(null)
@@ -635,10 +633,10 @@ export default function HomePage({
 
   return (
     <div className="min-h-screen bg-white bg-[url('/bg-hex-2.png')] bg-top bg-no-repeat text-slate-900 transition-colors">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 md:gap-12 md:py-14 md:flex-row md:gap-20">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 md:gap-12 md:py-14 md:flex-row">
         <aside className="md:w-1/3 md:sticky md:top-10">
           <div className="flex flex-col gap-6 pb-6 md:gap-10 md:pb-0">
-            <AddWordHeader />
+            <Header />
                     <div className="mt-2 pb-4 border-b-2 border-black">
                       {renderRandomEntryCard() ?? (
                         <div className="rounded-sm border border-dashed border-slate-900/30 p-4 text-sm text-slate-600">
@@ -650,7 +648,7 @@ export default function HomePage({
         </aside>
 
         <main className="md:w-2/3">
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-10">
 
             <section className="flex flex-wrap items-stretch gap-6 md:mt-2 md:flex-row md:items-start md:justify-between">
               <p className="text-lg min-w-[180px] flex-1 md:max-w-xl font-bold md:text-2xl text-slate-900">
@@ -876,7 +874,7 @@ export default function HomePage({
                   <h2 className="text-2xl font-bold">
                     Pomóż nam rozwijać słownik!
                   </h2>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-slate-900">
                     Znasz śląskie słowo, które powinno się tu znaleźć? Zapraszamy do dodania go do naszego słownika. Kliknij ponizej aby przejść do formularza.
                   </p>
                   <div className="w-full max-w-sm">{addWordButton}</div>
@@ -912,7 +910,7 @@ export default function HomePage({
                 <h2 className="text-2xl font-bold">
                   Na czym polega projekt „Śląski słownik majsterkowy”
                 </h2>
-                <p className="text-base leading-relaxed text-slate-700">
+                <p className="text-base leading-relaxed text-slate-900">
                   Nasz projekt łączy tradycję gwary śląskiej z majsterkowaniem i edukacją techniczną. Chcemy pokazać,
                   że gwara jest żywa i może być inspirującym narzędziem do nauki.
                 </p>
@@ -921,7 +919,7 @@ export default function HomePage({
               <div className="space-y-6">
                 <div className="space-y-3">
                   <h3 className="text-md font-semibold uppercase">Co planujemy?</h3>
-                  <ul className="space-y-3 text-base leading-relaxed text-slate-700">
+                  <ul className="space-y-3 text-base leading-relaxed text-slate-900">
                     <li className="flex items-start gap-3">
                       <Hammer className="mt-1 h-5 w-5 flex-shrink-0 text-primary" />
                       <span>
@@ -949,13 +947,13 @@ export default function HomePage({
 
                 <div className="space-y-3">
                   <h3 className="text-md font-semibold uppercase">Rezultat projektu</h3>
-                  <p className="text-base leading-relaxed text-slate-700">
+                  <p className="text-base leading-relaxed text-slate-900">
                     Powstaną trzy publikacje: dwa zeszyty inspiracyjne i metodyczne oraz ilustrowany słownik majsterkowy z
                     co najmniej 50 hasłami.
                   </p>
                 </div>
 
-                <p className="text-base leading-relaxed text-slate-700">
+                <p className="text-base leading-relaxed text-slate-900">
                   Dzięki wspólnej pracy nad słownikiem i warsztatom mieszkańcy Śląska w różnym wieku będą mogli aktywnie
                   włączyć się w ochronę i rozwój gwary - w nowoczesnej, twórczej formie.
                 </p>
