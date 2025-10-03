@@ -1,10 +1,35 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import ThemeScript from '@/components/theme-script'
+import { DEFAULT_SOCIAL_IMAGE, SITE_DESCRIPTION, SITE_NAME, resolveMetadataBase } from '@/lib/seo'
 
 export const metadata: Metadata = {
-  title: 'Śląski Słownik Majsterkowy',
-  description: 'Techniczny słownik śląsko-polski dla branż tradycyjnych i nowoczesnych',
+  metadataBase: resolveMetadataBase(),
+  title: {
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    siteName: SITE_NAME,
+    url: '/',
+    type: 'website',
+    locale: 'pl_PL',
+    images: [
+      {
+        url: DEFAULT_SOCIAL_IMAGE,
+        alt: `${SITE_NAME} logo`,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: [DEFAULT_SOCIAL_IMAGE],
+  },
 }
 
 export default function RootLayout({

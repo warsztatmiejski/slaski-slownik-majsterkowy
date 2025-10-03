@@ -1,8 +1,29 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import HomePage, { type EntryPreview, type HomePageProps } from '@/components/homepage'
 import { prisma } from '@/lib/prisma'
 import { EntryStatus, SubmissionStatus } from '@prisma/client'
 import { createSlug } from '@/lib/utils'
+import { DEFAULT_SOCIAL_IMAGE, SITE_DESCRIPTION, SITE_NAME } from '@/lib/seo'
+
+const ENTRY_INCLUDE = {
+  category: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+    },
+  },
+  exampleSentences: {
+    select: {
+      sourceText: true,
+      translatedText: true,
+      order: true,
+    },
+    orderBy: { order: 'asc' },
+    take: 3,
+  },
+} as const
 
 function startOfToday(): Date {
   const now = new Date()
@@ -57,6 +78,122 @@ function mapEntry(entry: {
   }
 }
 
+function createBaseMetadata(pathname: string = '/'): Metadata {
+  return {
+    title: { absolute: SITE_NAME },
+    description: SITE_DESCRIPTION,
+    alternates: {
+      canonical: pathname,
+    },
+    openGraph: {
+      title: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      siteName: SITE_NAME,
+      url: pathname,
+      type: 'website',
+      locale: 'pl_PL',
+      images: [
+        {
+          url: DEFAULT_SOCIAL_IMAGE,
+          alt: `${SITE_NAME} logo`,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      images: [DEFAULT_SOCIAL_IMAGE],
+    },
+  }
+}
+
+async function getEntryForMetadata(slug: string): Promise<EntryPreview | null> {
+  const normalizedSlug = slug.trim().toLowerCase()
+
+  const entry = await prisma.dictionaryEntry.findFirst({
+    where: {
+      status: EntryStatus.APPROVED,
+      slug: normalizedSlug,
+    },
+    include: ENTRY_INCLUDE,
+  })
+
+  if (entry) {
+    return mapEntry(entry)
+  }
+
+  const fallbackEntries = await prisma.dictionaryEntry.findMany({
+    where: { status: EntryStatus.APPROVED },
+    include: ENTRY_INCLUDE,
+  })
+
+  const matched = fallbackEntries.find(item => createSlug(item.sourceWord) === normalizedSlug)
+
+  return matched ? mapEntry(matched) : null
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>
+}): Promise<Metadata> {
+  const searchValue = searchParams?.s
+  const rawSlug = Array.isArray(searchValue) ? searchValue[0] : searchValue
+
+  if (!rawSlug) {
+    return createBaseMetadata()
+  }
+
+  const slug = rawSlug.trim()
+
+  if (!slug) {
+    return createBaseMetadata()
+  }
+
+  const entry = await getEntryForMetadata(slug)
+  const metadataSlug = entry?.slug ?? slug
+  const metadataPath = `/?s=${encodeURIComponent(metadataSlug)}`
+  const baseMetadata = createBaseMetadata(metadataPath)
+
+  if (!entry) {
+    return baseMetadata
+  }
+
+  const example = entry.exampleSentences[0]
+  const details: string[] = []
+
+  details.push(`Słowo: ${entry.sourceWord}${entry.targetWord ? ` (${entry.targetWord})` : ''}`)
+
+  if (example) {
+    details.push(`Przykład: ${example.sourceText} - ${example.translatedText}`)
+  } else if (entry.targetWord) {
+    details.push(`Tłumaczenie: ${entry.targetWord}`)
+  }
+
+  details.push(SITE_DESCRIPTION)
+
+  const description = details.join(' · ')
+  const title = `${entry.sourceWord} – ${SITE_NAME}`
+
+  return {
+    ...baseMetadata,
+    title: { absolute: title },
+    description,
+    openGraph: {
+      ...(baseMetadata.openGraph ?? {}),
+      title,
+      description,
+      url: metadataPath,
+    },
+    twitter: {
+      ...(baseMetadata.twitter ?? {}),
+      title,
+      description,
+    },
+  }
+}
+
 export default async function Page() {
   const today = startOfToday()
 
@@ -83,24 +220,7 @@ export default async function Page() {
     ]),
     prisma.dictionaryEntry.findMany({
       where: { status: EntryStatus.APPROVED },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-          },
-        },
-        exampleSentences: {
-          select: {
-            sourceText: true,
-            translatedText: true,
-            order: true,
-          },
-          orderBy: { order: 'asc' },
-          take: 3,
-        },
-      },
+      include: ENTRY_INCLUDE,
       orderBy: [
         { approvedAt: 'desc' },
         { updatedAt: 'desc' },
@@ -114,24 +234,7 @@ export default async function Page() {
           some: {},
         },
       },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-          },
-        },
-        exampleSentences: {
-          select: {
-            sourceText: true,
-            translatedText: true,
-            order: true,
-          },
-          orderBy: { order: 'asc' },
-          take: 3,
-        },
-      },
+      include: ENTRY_INCLUDE,
       orderBy: [
         { approvedAt: 'desc' },
         { updatedAt: 'desc' },

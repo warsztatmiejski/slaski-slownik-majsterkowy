@@ -10,6 +10,10 @@ import {
   Loader2,
   Hammer,
   ChevronLeft,
+  Facebook,
+  Linkedin,
+  Twitter,
+  Copy,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -159,7 +163,10 @@ export default function HomePage({
   const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false)
   const [isCategoryView, setIsCategoryView] = useState(false)
   const [isCategoryPanelOpen, setIsCategoryPanelOpen] = useState(false)
+  const [origin, setOrigin] = useState('')
+  const [shareCopied, setShareCopied] = useState(false)
   const lastCategorySlugRef = useRef<string | null>(null)
+  const copyResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
     featuredEntry ?? recentEntries[0] ?? null,
@@ -214,6 +221,48 @@ export default function HomePage({
     })
     return Array.from(unique)
   }, [selectedEntry])
+
+  const shareUrl = useMemo(() => {
+    if (!selectedEntry || !origin) return ''
+    const params = new URLSearchParams()
+    params.set('s', selectedEntry.slug)
+    const queryString = params.toString()
+    return `${origin}${pathname}${queryString ? `?${queryString}` : ''}`
+  }, [origin, pathname, selectedEntry])
+
+  const shareLinks = useMemo(() => {
+    if (!selectedEntry || !shareUrl) return []
+    const encodedUrl = encodeURIComponent(shareUrl)
+    const shareText = encodeURIComponent(`Poznaj słowo "${selectedEntry.sourceWord}" w Śląskim Słowniku Majsterkowym.`)
+    return [
+      {
+        name: 'Facebook',
+        href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+        icon: Facebook,
+      },
+      {
+        name: 'X (Twitter)',
+        href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${shareText}`,
+        icon: Twitter,
+      },
+      {
+        name: 'LinkedIn',
+        href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+        icon: Linkedin,
+      },
+    ]
+  }, [selectedEntry, shareUrl])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setOrigin(window.location.origin)
+    }
+    return () => {
+      if (copyResetTimeoutRef.current) {
+        clearTimeout(copyResetTimeoutRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!activeCategory) {
@@ -288,6 +337,25 @@ export default function HomePage({
 
   const handleRecentClick = (entry: EntryPreview) => {
     handleSelectEntry(entry)
+  }
+
+  const handleCopyShareLink = async () => {
+    if (!shareUrl) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setShareCopied(true)
+      if (copyResetTimeoutRef.current) {
+        clearTimeout(copyResetTimeoutRef.current)
+      }
+      copyResetTimeoutRef.current = setTimeout(() => {
+        setShareCopied(false)
+      }, 2000)
+    } catch (error) {
+      console.error('Copy share link failed:', error)
+    }
   }
 
   const loadSuggestions = useCallback(
@@ -708,7 +776,7 @@ export default function HomePage({
               </div>
 
               <p className="text-sm font-semibold uppercase text-slate-900">
-                  Wpisz słowo po polsku lub śląsku lub
+                  Wpisz słowo po polsku lub śląsku
               </p>
 
               <div className="space-y-3">
@@ -777,7 +845,7 @@ export default function HomePage({
                 <>
 
                   {isEntryLoading && !selectedEntry ? (
-                    <div className="space-y-6">
+                    <div className="space-y-6 mt-6">
                       <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-end">
                         <div className="space-y-3">
                           <Skeleton className="h-12 w-3/4" />
@@ -803,7 +871,7 @@ export default function HomePage({
                       </div>
                     </div>
                   ) : selectedEntry ? (
-                    <div className="space-y-6">
+                    <div className="space-y-6 mt-6">
                       <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
                         <div className="space-y-2">
                           <h3 className="mb-4 text-5xl font-semibold leading-tight text-primary md:text-6xl">
@@ -845,18 +913,34 @@ export default function HomePage({
 
                       <Separator className="h-px bg-slate-900/20" />
 
-                      <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
-                        <div className="text-sm text-slate-700">
-                          {selectedEntry.notes ?? 'Brak dodatkowych notatek.'}
-                        </div>
-                        <div className="flex justify-end">
+                      <div className="space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Udostępnij hasło
+                        </p>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {shareLinks.map(link => {
+                            const Icon = link.icon
+                            return (
+                              <a
+                                key={link.name}
+                                href={link.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 rounded-sm border border-slate-900 px-3 py-1 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary"
+                              >
+                                <Icon className="h-4 w-4" />
+                                {link.name}
+                              </a>
+                            )
+                          })}
                           <button
                             type="button"
-                            onClick={() => handleCategoryClick(selectedEntry.category.slug)}
-                            className="inline-flex items-center gap-2 rounded-sm border border-slate-900 px-3 py-1 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary"
+                            onClick={handleCopyShareLink}
+                            disabled={!shareUrl}
+                            className="inline-flex items-center gap-2 rounded-sm border border-slate-900 px-3 py-1 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            <span>{selectedEntry.category.name}</span>
-                            <ChevronRight className="h-4 w-4" />
+                            <Copy className="h-4 w-4" />
+                            {shareCopied ? 'Skopiowano!' : 'Kopiuj link'}
                           </button>
                         </div>
                       </div>
