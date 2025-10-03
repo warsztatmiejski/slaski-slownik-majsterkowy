@@ -8,9 +8,6 @@ import {
   Sparkles,
   ChevronRight,
   Loader2,
-  ChevronDown,
-  List,
-  Clock,
   Hammer,
 } from 'lucide-react'
 
@@ -20,7 +17,6 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import AddWordHeader from '@/components/add-word-header'
 import Footer from '@/components/footer'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   Dialog,
   DialogContent,
@@ -160,8 +156,6 @@ export default function HomePage({
   const [isFetchingCategory, setIsFetchingCategory] = useState(false)
   const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false)
   const lastCategorySlugRef = useRef<string | null>(null)
-  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false)
-  const [isRecentMenuOpen, setIsRecentMenuOpen] = useState(false)
   const categorySectionRef = useRef<HTMLElement | null>(null)
   const entrySectionRef = useRef<HTMLElement | null>(null)
 
@@ -532,8 +526,8 @@ export default function HomePage({
         key={category.id}
         type="button"
         onClick={() => handleCategoryClick(category.slug)}
-        className={`flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left transition-colors ${
-          isActive ? 'bg-primary/10 text-primary' : 'hover:bg-slate-100'
+        className={`flex items-center justify-between border-b border-slate-900 py-2 text-sm text-slate-900 transition-colors ${
+          isActive ? 'text-primary border-primary' : 'hover:text-primary hover:border-primary'
         }`}
       >
         <span>{category.name}</span>
@@ -545,18 +539,6 @@ export default function HomePage({
       </button>
     )
   })
-
-  const recentEntryButtons = recentSilesianEntries.map(entry => (
-    <button
-      key={entry.id}
-      type="button"
-      onClick={() => handleRecentClick(entry)}
-      className="flex items-center justify-between text-left text-sm text-slate-900 border-b-1 border-slate-900 transition-colors hover:text-primary hover:border-primary"
-    >
-      <span className="inline-block pb-1 transition-colors ">{entry.sourceWord}</span>
-      <ChevronRight className="h-4 w-4" />
-    </button>
-  ))
 
   const renderRandomEntryCard = () =>
     randomEntry ? (
@@ -590,70 +572,25 @@ export default function HomePage({
         <aside className="md:w-1/3 md:sticky md:top-10">
           <div className="flex flex-col gap-6 pb-6 md:gap-10 md:pb-0">
             <AddWordHeader />
-
-            <div className="flex flex-col gap-6 pt-6">
-              <div className="flex flex-wrap items-stretch gap-6 md:hidden">
-                <div className="min-w-[200px] flex-1">{addWordButton}</div>
-                <Collapsible
-                  open={isCategoryMenuOpen}
-                  onOpenChange={setIsCategoryMenuOpen}
-                  className="min-w-[180px] flex-1"
-                >
-                  <CollapsibleTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary"
-                    >
-                      <span className="flex items-center gap-2">
-                        <List className="h-4 w-4" />
-                        Kategorie
-                      </span>
-                      <ChevronDown
-                        className={`h-4 w-4 transition-transform ${isCategoryMenuOpen ? 'rotate-180' : ''}`}
-                      />
-                    </button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2 space-y-2">
-                    {categoryButtons}
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-
-              <div className="hidden md:block space-y-3">{addWordButton}</div>
-
-              <div className="hidden md:block space-y-3">
-                <h2 className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                  Kategorie
-                </h2>
-                <nav
-                  className="space-y-2 text-sm text-slate-900"
-                  aria-label={`Kategorie (${stats.totalEntries.toLocaleString('pl-PL')} haseł)`}
-                >
-                  {categoryButtons}
-                </nav>
-              </div>
-            </div>
+                    <div className="mt-2 pb-4 border-b-2 border-black">
+                      {renderRandomEntryCard() ?? (
+                        <div className="rounded-sm border border-dashed border-slate-900/30 p-4 text-sm text-slate-600">
+                          Brak wyróżnionego hasła.
+                        </div>
+                      )}
+                    </div>
           </div>
         </aside>
 
         <main className="md:w-2/3">
           <div className="flex flex-col gap-6">
             <section className="flex flex-wrap items-stretch gap-6 md:mt-4 md:flex-row md:items-start md:justify-between">
-              <p className="text-md min-w-[180px] flex-1 md:max-w-xl font-bold md:text-lg text-slate-900">
+              <p className="text-lg min-w-[180px] flex-1 md:max-w-xl font-bold md:text-2xl text-slate-900">
                 Techniczny słownik śląsko-polski rozwijany przez społeczność i ekspertów branżowych.
               </p>
-              <div className="min-w-[200px] flex-1">
-                {renderRandomEntryCard() ?? (
-                  <div className="rounded-sm border border-dashed border-slate-900/30 p-4 text-sm text-slate-600">
-                    Brak wyróżnionego hasła.
-                  </div>
-                )}
-              </div>
             </section>
 
-            <Separator className="h-[2px] bg-slate-900" />
-
-            <section className="space-y-3 rounded-sm bg-red-200/50 p-6 md:p-8">
+            <section className="space-y-3 rounded-sm bg-orange-200/50 p-6 md:p-8">
               <div className="space-y-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
@@ -661,7 +598,7 @@ export default function HomePage({
                     value={searchTerm}
                     onChange={event => handleInputChange(event.target.value)}
                     placeholder="Wyszukaj w słowniku..."
-                    className={`${inputField} h-14 pl-11 text-lg font-semibold tracking-wide`}
+                    className={`${inputField} h-14 pl-11 text-xl font-semibold tracking-wide`}
                   />
                   {isFetchingSuggestions && (
                     <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-500" />
@@ -707,40 +644,14 @@ export default function HomePage({
                 )}
               </div>
 
-              {recentSilesianEntries.length > 0 && (
-                <>
-                  <div className="md:hidden">
-                    <Collapsible open={isRecentMenuOpen} onOpenChange={setIsRecentMenuOpen}>
-                      <CollapsibleTrigger asChild>
-                        <button
-                          type="button"
-                          className="flex w-full items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary"
-                        >
-                          <span className="flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
-                            Ostatnio dodane hasła
-                          </span>
-                          <ChevronDown
-                            className={`h-4 w-4 transition-transform ${isRecentMenuOpen ? 'rotate-180' : ''}`}
-                          />
-                        </button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="mt-3 space-y-2">
-                        {recentEntryButtons}
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </div>
-
-                  <div className="hidden md:block space-y-2">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                      Ostatnio dodane hasła
-                    </p>
-                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                      {recentEntryButtons}
-                    </div>
-                  </div>
-                </>
-              )}
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                  Kategorie ({stats.totalEntries.toLocaleString('pl-PL')} haseł)
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+                  {categoryButtons}
+                </div>
+              </div>
             </section>
 
             {!activeCategory && (selectedEntry || isEntryLoading) && (
@@ -888,6 +799,44 @@ export default function HomePage({
               </section>
             )}
 
+            <Separator className="h-[2px] bg-slate-900" />
+
+            <section className="rounded-sm bg-amber-100/80 p-6">
+              <div className="space-y-4 md:flex md:items-start md:justify-between md:space-y-0">
+                <div className="space-y-4 md:w-1/2 md:pr-6">
+                  <h2 className="text-xl font-semibold">
+                    Pomóż nam rozwijać śląski słownik majsterkowy!
+                  </h2>
+                  <p className="text-sm text-slate-600">
+                    Znasz śląskie słowo, które powinno się tu znaleźć? Zapraszamy do dodania go do naszego słownika. Kliknij ponizej aby przejść do formularza.
+                  </p>
+                  <div className="w-full max-w-sm">{addWordButton}</div>
+                </div>
+                <div className="space-y-6 md:w-1/2 md:pl-6">
+                  <div>
+                    <h3 className="text-xs uppercase tracking-[0.18em] text-slate-500">Ostatnio dodane hasła</h3>
+                    <div className="mt-3 space-y-2">
+                      {recentSilesianEntries.length > 0 ? (
+                        recentSilesianEntries.map(entry => (
+                          <button
+                            key={entry.id}
+                            type="button"
+                            onClick={() => handleRecentClick(entry)}
+                            className="flex items-center justify-between border-b border-slate-900 py-2 text-left text-sm text-slate-900 transition-colors hover:border-primary hover:text-primary"
+                          >
+                            <span className="font-medium">{entry.sourceWord}</span>
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        ))
+                      ) : (
+                        <p className="text-sm text-slate-500">Brak nowych wpisów.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <section className="space-y-5 mt-5 text-slate-900">
               <header className="space-y-3">
                 <h2 className="text-2xl font-semibold">
@@ -901,7 +850,7 @@ export default function HomePage({
 
               <div className="space-y-6">
                 <div className="space-y-3">
-                  <h3 className="text-xl font-semibold uppercase">Co planujemy?</h3>
+                  <h3 className="text-md font-semibold uppercase">Co planujemy?</h3>
                   <ul className="space-y-3 text-base leading-relaxed text-slate-700">
                     <li className="flex items-start gap-3">
                       <Hammer className="mt-1 h-5 w-5 text-primary" />
@@ -929,7 +878,7 @@ export default function HomePage({
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-xl font-semibold uppercase">Rezultat projektu</h3>
+                  <h3 className="text-md font-semibold uppercase">Rezultat projektu</h3>
                   <p className="text-base leading-relaxed text-slate-700">
                     Powstaną trzy publikacje: dwa zeszyty inspiracyjne i metodyczne oraz ilustrowany słownik majsterkowy z
                     co najmniej 50 hasłami.
@@ -938,7 +887,7 @@ export default function HomePage({
 
                 <p className="text-base leading-relaxed text-slate-700">
                   Dzięki wspólnej pracy nad słownikiem i warsztatom mieszkańcy Śląska w różnym wieku będą mogli aktywnie
-                  włączyć się w ochronę i rozwój gwary – w nowoczesnej, twórczej formie.
+                  włączyć się w ochronę i rozwój gwary - w nowoczesnej, twórczej formie.
                 </p>
               </div>
             </section>

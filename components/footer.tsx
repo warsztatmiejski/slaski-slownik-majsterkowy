@@ -21,7 +21,7 @@ export default function Footer({ onOpenAdminDialog }: FooterProps) {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4 text-xs uppercase tracking-[0.18em] text-slate-500">
-          <span>(c) 2025 Warsztat Miejski</span>
+          <span>&#169; 2025 Warsztat Miejski</span>
           <div className="flex items-center gap-4">
             <Link href="/polityka-prywatnosci" className="hover:text-primary">
               Polityka prywatności
