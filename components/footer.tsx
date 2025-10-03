@@ -7,7 +7,7 @@ interface FooterProps {
 
 export default function Footer({ onOpenAdminDialog }: FooterProps) {
   return (
-    <footer className="border-t border-slate-300 bg-white text-slate-700">
+    <footer className="border-t border-slate-300 bg-white/90 text-slate-700">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
         <div className="flex flex-col gap-4 text-sm sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-xl">

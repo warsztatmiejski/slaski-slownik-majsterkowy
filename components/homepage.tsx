@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -158,9 +158,8 @@ export default function HomePage({
   const [isFetchingCategory, setIsFetchingCategory] = useState(false)
   const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false)
   const [isCategoryView, setIsCategoryView] = useState(false)
+  const [isCategoryPanelOpen, setIsCategoryPanelOpen] = useState(false)
   const lastCategorySlugRef = useRef<string | null>(null)
-  const categorySectionRef = useRef<HTMLElement | null>(null)
-  const entrySectionRef = useRef<HTMLElement | null>(null)
 
   const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
     featuredEntry ?? recentEntries[0] ?? null,
@@ -184,7 +183,7 @@ export default function HomePage({
     if (!recentEntries.length) return []
     const filtered = recentEntries.filter(entry => entry.sourceLang === 'SILESIAN')
     const base = filtered.length ? filtered : recentEntries
-    return base.slice(0, 9)
+    return base.slice(0, 6)
   }, [recentEntries])
 
   const activeCategoryData = useMemo(
@@ -233,8 +232,10 @@ export default function HomePage({
       params.delete('s')
     }
     const queryString = params.toString()
-    router.replace(`${pathname}${queryString ? `?${queryString}` : ''}`, {
-      scroll: false,
+    startTransition(() => {
+      router.replace(`${pathname}${queryString ? `?${queryString}` : ''}`, {
+        scroll: false,
+      })
     })
   }
 
@@ -247,23 +248,42 @@ export default function HomePage({
       params.delete('k')
     }
     const queryString = params.toString()
-    router.replace(`${pathname}${queryString ? `?${queryString}` : ''}`, {
-      scroll: false,
+    startTransition(() => {
+      router.replace(`${pathname}${queryString ? `?${queryString}` : ''}`, {
+        scroll: false,
+      })
     })
   }
 
-  const handleSelectEntry = (entry: EntryPreview) => {
+  const clearCategoryState = () => {
+    const hadActiveCategory = Boolean(activeCategory)
+    setIsCategoryView(false)
     setActiveCategory(null)
+    setCategoryEntries([])
+    setCategoryError(null)
+    setIsFetchingCategory(false)
+    setPendingCategoryFetch(null)
+    if (hadActiveCategory) {
+      updateUrlWithCategory(null)
+    }
+  }
+
+  const closeCategoryPanel = () => {
+    clearCategoryState()
+    setIsCategoryPanelOpen(false)
+  }
+
+  const showCategoryList = () => {
+    clearCategoryState()
+    setIsCategoryPanelOpen(true)
+  }
+
+  const handleSelectEntry = (entry: EntryPreview) => {
     setSelectedEntry(entry)
     setSuggestions([])
     setSearchError(null)
-    setCategoryEntries([])
-    setCategoryError(null)
-    updateUrlWithCategory(null)
+    closeCategoryPanel()
     updateUrlWithEntry(entry.slug)
-    if (entrySectionRef.current) {
-      entrySectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
   }
 
   const handleRecentClick = (entry: EntryPreview) => {
@@ -338,13 +358,8 @@ export default function HomePage({
   const handleCategoryClick = (slug: string) => {
     const nextCategory = activeCategory === slug ? null : slug
 
-    const scrollToCategory = () => {
-      if (categorySectionRef.current) {
-        categorySectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }
-    }
-
     if (nextCategory) {
+      setIsCategoryPanelOpen(true)
       setActiveCategory(nextCategory)
       setSearchTerm('')
       setSuggestions([])
@@ -356,20 +371,9 @@ export default function HomePage({
       setPendingCategoryFetch(nextCategory)
       updateUrlWithCategory(nextCategory)
       setIsCategoryView(true)
-      scrollToCategory()
     } else {
-      handleCategoryReset()
+      showCategoryList()
     }
-  }
-
-  const handleCategoryReset = () => {
-    setIsCategoryView(false)
-    setActiveCategory(null)
-    setCategoryEntries([])
-    setCategoryError(null)
-    setIsFetchingCategory(false)
-    setPendingCategoryFetch(null)
-    updateUrlWithCategory(null)
   }
 
   useEffect(() => {
@@ -430,6 +434,8 @@ export default function HomePage({
       setIsCategoryView(false)
       return
     }
+
+    setIsCategoryPanelOpen(true)
 
     if (lastCategorySlugRef.current === categorySlug) {
       return
@@ -502,8 +508,7 @@ export default function HomePage({
 
   const handleInputChange = (value: string) => {
     if (activeCategory) {
-      setActiveCategory(null)
-      updateUrlWithCategory(null)
+      clearCategoryState()
     }
     if (selectedEntry && value.toLowerCase() !== selectedEntry.sourceWord.toLowerCase()) {
       setSelectedEntry(null)
@@ -543,9 +548,10 @@ export default function HomePage({
         key={category.id}
         type="button"
         onClick={() => handleCategoryClick(category.slug)}
-        className={`flex items-center justify-between border-b border-slate-900 py-2 text-sm text-slate-900 transition-colors ${
-          isActive ? 'text-primary border-primary' : 'hover:text-primary hover:border-primary'
-        }`}
+        className={cn(
+          'flex w-full items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold uppercase transition-colors',
+          isActive ? 'bg-primary/10 border-primary text-primary' : 'text-slate-900 hover:bg-white/25 hover:text-primary hover:border-primary',
+        )}
       >
         <span>{category.name}</span>
         {pendingCategoryFetch === category.slug ? (
@@ -588,12 +594,15 @@ export default function HomePage({
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
-          onClick={handleCategoryReset}
-          className="flex items-center gap-2 text-sm font-semibold text-slate-900 transition-colors hover:text-primary"
+          onClick={showCategoryList}
+          className="flex h-8 w-8 items-center justify-center rounded-sm border border-slate-900 text-slate-900 transition-colors hover:border-primary hover:bg-white/25 hover:text-primary"
+          aria-label="Wróć do listy kategorii"
         >
           <ChevronLeft className="h-4 w-4" />
-          <span>{activeCategoryData ? activeCategoryData.name : 'Kategorie'}</span>
         </button>
+        <span className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-900">
+          {activeCategoryData ? activeCategoryData.name : 'Kategorie'}
+        </span>
         {activeCategoryData?.description && (
           <p className="text-xs text-slate-500">{activeCategoryData.description}</p>
         )}
@@ -612,10 +621,9 @@ export default function HomePage({
               key={entry.id}
               type="button"
               onClick={() => handleSelectEntry(entry)}
-              className="flex items-center justify-between border-b border-slate-900 py-2 text-left text-sm text-slate-900 transition-colors hover:border-primary hover:text-primary"
+              className="w-full border-b border-slate-900 px-0 py-2 text-left text-sm font-medium text-slate-900 transition-colors hover:text-primary"
             >
-              <span className="font-medium">{entry.sourceWord}</span>
-              <ChevronRight className="h-4 w-4" />
+              {entry.sourceWord}
             </button>
           ))}
         </div>
@@ -650,7 +658,7 @@ export default function HomePage({
               </p>
             </section>
 
-            <section className="space-y-6 bg-accent/75 p-6 md:p-8">
+            <section className="space-y-3 bg-accent/75 p-6 md:p-8">
               <div className="space-y-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
@@ -681,16 +689,13 @@ export default function HomePage({
                             type="button"
                             onMouseDown={event => event.preventDefault()}
                             onClick={() => handleSuggestionClick(entry)}
-                            className={`flex w-full items-center justify-between border-b border-slate-900/10 px-3 py-2 text-left text-sm transition-colors last:border-b-0 ${
-                              isActive ? 'bg-primary/10 text-primary' : 'hover:bg-slate-100'
-                            }`}
+                            className={cn(
+                              'w-full border-b border-slate-900 px-0 py-2 text-left text-sm transition-colors last:border-b-0',
+                              isActive ? 'font-semibold text-primary' : 'text-slate-900 hover:text-primary',
+                            )}
                           >
-                            <span className="font-medium text-slate-900">
-                              <span className="inline-block border-b-2 border-slate-900/30 pb-1 transition-colors">{entry.sourceWord}</span>
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              → {entry.targetWord}
-                            </span>
+                            <span className="block font-medium">{entry.sourceWord}</span>
+                            <span className="block text-xs text-slate-500">{entry.targetWord}</span>
                           </button>
                         )
                       })
@@ -704,127 +709,163 @@ export default function HomePage({
                 )}
               </div>
 
-              <div className="space-y-2">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                  {isCategoryView && activeCategoryData
-                    ? `Kategoria: ${activeCategoryData.name}`
-                    : `Kategorie (${stats.totalEntries.toLocaleString('pl-PL')} haseł)`}
-                </p>
+              <p className="text-sm font-semibold uppercase text-slate-900">
+                  Wpisz słowo po polsku lub śląsku lub
+              </p>
+
+              <div className="space-y-3">
                 <div className="relative overflow-hidden">
                   <div
                     className={cn(
                       'transition-all duration-300',
-                      isCategoryView ? 'pointer-events-none absolute inset-0 translate-x-[-105%] opacity-0' : 'relative translate-x-0 opacity-100',
+                      isCategoryPanelOpen
+                        ? 'pointer-events-none absolute inset-0 translate-x-[-105%] opacity-0'
+                        : 'relative translate-x-0 opacity-100',
                     )}
                   >
-                    <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">{categoryButtons}</div>
+                    <button
+                      type="button"
+                      onClick={showCategoryList}
+                      className="flex w-full items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold uppercase text-slate-900 transition-colors hover:border-primary hover:bg-white/25 hover:text-primary"
+                      aria-expanded={isCategoryPanelOpen}
+                      aria-controls="categories-panel"
+                    >
+                      <span>Znajdź słowo wg kategorii</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
                   </div>
+
+                  <div
+                    id="categories-panel"
+                    className={cn(
+                      'transition-all duration-300',
+                      isCategoryPanelOpen && !isCategoryView
+                        ? 'relative translate-x-0 opacity-100'
+                        : 'pointer-events-none absolute inset-0 translate-x-[105%] opacity-0',
+                    )}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={closeCategoryPanel}
+                          className="flex h-8 w-8 items-center justify-center rounded-sm border border-slate-900 text-slate-900 transition-colors hover:border-primary hover:bg-white/25 hover:text-primary"
+                          aria-label="Wróć do poprzedniego widoku"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <span className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-900">
+                          Kategorie
+                        </span>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">{categoryButtons}</div>
+                    </div>
+                  </div>
+
                   <div
                     className={cn(
                       'transition-all duration-300',
-                      isCategoryView ? 'relative translate-x-0 opacity-100' : 'pointer-events-none absolute inset-0 translate-x-[105%] opacity-0',
+                      isCategoryView
+                        ? 'relative translate-x-0 opacity-100'
+                        : 'pointer-events-none absolute inset-0 translate-x-[105%] opacity-0',
                     )}
                   >
                     {renderCategoryEntriesSection()}
                   </div>
                 </div>
               </div>
-            </section>
 
-            <section
-              ref={entrySectionRef}
-              className="bg-accent/75 p-6 md:p-8"
-            >
-              {isEntryLoading && !selectedEntry ? (
-                <div className="space-y-6">
-                  <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-end">
-                    <div className="space-y-3">
-                      <Skeleton className="h-12 w-3/4" />
-                      <Skeleton className="h-4 w-1/3" />
-                      <Skeleton className="h-3 w-1/4" />
-                    </div>
-                    <div className="space-y-3 md:text-right">
-                      <Skeleton className="h-12 w-2/3 md:ml-auto" />
-                      <Skeleton className="h-3 w-1/3 md:ml-auto" />
-                      <Skeleton className="h-3 w-1/4 md:ml-auto" />
-                    </div>
-                  </div>
-                  <div className="h-px w-full bg-slate-900/20" />
-                  <div className="space-y-3">
-                    <Skeleton className="h-5 w-4/5" />
-                    <Skeleton className="h-5 w-3/5" />
-                    <Skeleton className="h-5 w-2/5" />
-                  </div>
-                  <div className="h-px w-full bg-slate-900/20" />
-                  <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
-                    <Skeleton className="h-20 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                </div>
-              ) : selectedEntry ? (
-                <div className="space-y-6">
-                  <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
-                    <div className="space-y-2">
-                      <h3 className="mb-4 text-5xl font-semibold leading-tight text-primary md:text-6xl">
-                        {selectedEntry.sourceWord}
-                      </h3>
-                      {selectedEntry.pronunciation && (
-                        <p className="text-lg font-mono text-slate-600">
-                          [{selectedEntry.pronunciation}]
-                        </p>
-                      )}
-                      {selectedEntry.partOfSpeech && (
-                        <p className="text-xs font-bold uppercase text-slate-900">
-                          {selectedEntry.partOfSpeech}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end gap-2 text-right">
-                      {translations.length > 0 ? (
-                        translations.map(translation => (
-                          <p key={translation} className="text-3xl font-semibold leading-tight text-slate-900 md:text-4xl">
-                            {translation}
-                          </p>
-                        ))
-                      ) : (
-                        <p className="text-base text-slate-700">Brak tłumaczeń.</p>
-                      )}
-                    </div>
-                  </div>
+              {(isEntryLoading && !selectedEntry) || selectedEntry ? (
+                <>
 
-                  <Separator className="h-px bg-slate-900/20" />
-
-                  <div className="space-y-4">
-                    {selectedEntry.exampleSentences.length > 0 ? (
-                      selectedEntry.exampleSentences.map(renderExampleSentence)
-                    ) : (
-                      <p className="text-sm text-slate-600">Brak przykładów użycia dla tego hasła.</p>
-                    )}
-                  </div>
-
-                  <Separator className="h-px bg-slate-900/20" />
-
-                  <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
-                    <div className="text-sm text-slate-700">
-                      {selectedEntry.notes ?? 'Brak dodatkowych notatek.'}
+                  {isEntryLoading && !selectedEntry ? (
+                    <div className="space-y-6">
+                      <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-end">
+                        <div className="space-y-3">
+                          <Skeleton className="h-12 w-3/4" />
+                          <Skeleton className="h-4 w-1/3" />
+                          <Skeleton className="h-3 w-1/4" />
+                        </div>
+                        <div className="space-y-3 md:text-right">
+                          <Skeleton className="h-12 w-2/3 md:ml-auto" />
+                          <Skeleton className="h-3 w-1/3 md:ml-auto" />
+                          <Skeleton className="h-3 w-1/4 md:ml-auto" />
+                        </div>
+                      </div>
+                      <div className="h-px w-full bg-slate-900/20" />
+                      <div className="space-y-3">
+                        <Skeleton className="h-5 w-4/5" />
+                        <Skeleton className="h-5 w-3/5" />
+                        <Skeleton className="h-5 w-2/5" />
+                      </div>
+                      <div className="h-px w-full bg-slate-900/20" />
+                      <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                      </div>
                     </div>
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => handleCategoryClick(selectedEntry.category.slug)}
-                        className="inline-flex items-center gap-2 rounded-sm border border-slate-900 px-3 py-1 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary"
-                      >
-                        <span>{selectedEntry.category.name}</span>
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
+                  ) : selectedEntry ? (
+                    <div className="space-y-6">
+                      <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
+                        <div className="space-y-2">
+                          <h3 className="mb-4 text-5xl font-semibold leading-tight text-primary md:text-6xl">
+                            {selectedEntry.sourceWord}
+                          </h3>
+                          {selectedEntry.pronunciation && (
+                            <p className="text-lg font-mono text-slate-600">
+                              [{selectedEntry.pronunciation}]
+                            </p>
+                          )}
+                          {selectedEntry.partOfSpeech && (
+                            <p className="text-xs font-bold uppercase text-slate-900">
+                              {selectedEntry.partOfSpeech}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2 text-right">
+                          {translations.length > 0 ? (
+                            translations.map(translation => (
+                              <p key={translation} className="text-3xl font-semibold leading-tight text-slate-900 md:text-4xl">
+                                {translation}
+                              </p>
+                            ))
+                          ) : (
+                            <p className="text-base text-slate-700">Brak tłumaczeń.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <Separator className="h-px bg-slate-900/20" />
+
+                      <div className="space-y-4">
+                        {selectedEntry.exampleSentences.length > 0 ? (
+                          selectedEntry.exampleSentences.map(renderExampleSentence)
+                        ) : (
+                          <p className="text-sm text-slate-600">Brak przykładów użycia dla tego hasła.</p>
+                        )}
+                      </div>
+
+                      <Separator className="h-px bg-slate-900/20" />
+
+                      <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
+                        <div className="text-sm text-slate-700">
+                          {selectedEntry.notes ?? 'Brak dodatkowych notatek.'}
+                        </div>
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleCategoryClick(selectedEntry.category.slug)}
+                            className="inline-flex items-center gap-2 rounded-sm border border-slate-900 px-3 py-1 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary"
+                          >
+                            <span>{selectedEntry.category.name}</span>
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-sm border border-dashed border-slate-900/30 p-6 text-sm text-slate-600">
-                  Brak wybranego wpisu. Zacznij wpisywać słowo lub wybierz je z listy powyżej.
-                </div>
-              )}
+                  ) : null}
+                </>
+              ) : null}
             </section>
 
             <Separator className="h-[2px] bg-slate-900" />
@@ -843,17 +884,16 @@ export default function HomePage({
                 <div className="space-y-6 md:w-1/2 md:pl-6">
                   <div>
                     <h3 className="text-xs uppercase tracking-[0.18em] text-slate-500">Ostatnio dodane hasła</h3>
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
                       {recentSilesianEntries.length > 0 ? (
                         recentSilesianEntries.map(entry => (
                           <button
                             key={entry.id}
                             type="button"
                             onClick={() => handleRecentClick(entry)}
-                            className="flex items-center justify-between border-b border-slate-900 py-2 text-left text-sm text-slate-900 transition-colors hover:border-primary hover:text-primary"
+                            className="w-full border-b border-slate-900 px-0 py-2 text-left text-sm font-medium text-slate-900 transition-colors hover:text-primary"
                           >
-                            <span className="font-medium">{entry.sourceWord}</span>
-                            <ChevronRight className="h-4 w-4" />
+                            {entry.sourceWord}
                           </button>
                         ))
                       ) : (
@@ -883,7 +923,7 @@ export default function HomePage({
                   <h3 className="text-md font-semibold uppercase">Co planujemy?</h3>
                   <ul className="space-y-3 text-base leading-relaxed text-slate-700">
                     <li className="flex items-start gap-3">
-                      <Hammer className="mt-1 h-5 w-5 text-primary" />
+                      <Hammer className="mt-1 h-5 w-5 flex-shrink-0 text-primary" />
                       <span>
                         stworzenie śląskiego słownika majsterkowego - katalogu słów związanych z techniką, narzędziami i
                         wynalazczością. Słownik powstanie wspólnie z mieszkańcami Śląska poprzez narzędzie online, a
@@ -891,14 +931,14 @@ export default function HomePage({
                       </span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <Hammer className="mt-1 h-5 w-5 text-primary" />
+                      <Hammer className="mt-1 h-5 w-5 flex-shrink-0 text-primary" />
                       <span>
                         przygotowanie materiałów edukacyjnych dla nauczycieli i edukatorów, które pomogą wprowadzać gwarę
                         do zajęć,
                       </span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <Hammer className="mt-1 h-5 w-5 text-primary" />
+                      <Hammer className="mt-1 h-5 w-5 flex-shrink-0 text-primary" />
                       <span>
                         organizację 10 warsztatów: pięciu dla nauczycieli i edukatorów oraz pięciu dla uczniów, łączących
                         praktyczne majsterkowanie z nauką gwary.
