@@ -1,6 +1,6 @@
 const SITE_NAME = 'Śląski Słownik Majsterkowy'
 const SITE_DESCRIPTION = 'Techniczny słownik śląsko-polski dla branż tradycyjnych i nowoczesnych'
-const DEFAULT_SOCIAL_IMAGE = '/ssm.svg'
+const DEFAULT_SOCIAL_IMAGE = '/ssm-social.png'
 
 function resolveMetadataBase(): URL | undefined {
   const envUrl = process.env.NEXT_PUBLIC_APP_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined)

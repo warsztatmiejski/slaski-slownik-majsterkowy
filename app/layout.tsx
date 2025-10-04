@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     images: [
       {
         url: DEFAULT_SOCIAL_IMAGE,
-        alt: `${SITE_NAME} logo`,
+        alt: `${SITE_NAME} – podgląd grafiki`,
       },
     ],
   },

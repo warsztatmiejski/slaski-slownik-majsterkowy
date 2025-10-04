@@ -95,7 +95,7 @@ function createBaseMetadata(pathname: string = '/'): Metadata {
       images: [
         {
           url: DEFAULT_SOCIAL_IMAGE,
-          alt: `${SITE_NAME} logo`,
+          alt: `${SITE_NAME} – podgląd grafiki`,
         },
       ],
     },
@@ -160,20 +160,13 @@ export async function generateMetadata({
     return baseMetadata
   }
 
-  const example = entry.exampleSentences[0]
-  const details: string[] = []
-
-  details.push(`Słowo: ${entry.sourceWord}${entry.targetWord ? ` (${entry.targetWord})` : ''}`)
-
-  if (example) {
-    details.push(`Przykład: ${example.sourceText} - ${example.translatedText}`)
-  } else if (entry.targetWord) {
-    details.push(`Tłumaczenie: ${entry.targetWord}`)
-  }
-
-  details.push(SITE_DESCRIPTION)
-
-  const description = details.join(' · ')
+  const exampleTexts = entry.exampleSentences
+    .flatMap(sentence => [sentence.sourceText, sentence.translatedText])
+    .map(text => text.trim())
+    .filter(Boolean)
+  const description = exampleTexts.length
+    ? exampleTexts.join(' ')
+    : entry.targetWord ?? SITE_DESCRIPTION
   const title = `${entry.sourceWord} – ${SITE_NAME}`
 
   return {

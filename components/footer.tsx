@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import Image from 'next/image'
 
 interface FooterProps {
@@ -20,8 +19,26 @@ export default function Footer({ onOpenAdminDialog }: FooterProps) {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 text-xs uppercase tracking-[0.18em] text-slate-500">
-          <span>&#169; 2025 Warsztat Miejski</span>
+        <div className="flex flex-wrap items-center justify-between gap-6 text-xs uppercase tracking-[0.18em] text-slate-500">
+          <div className="flex flex-wrap items-center gap-6">
+            <span>&#169; 2025 Warsztat Miejski</span>
+            <a
+              href="https://typotheque.com/fonts/plotter"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium hover:text-primary"
+            >
+              Font Plotter od Typotheque
+            </a>
+            <a
+              href="https://lenart.pl"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium hover:text-primary"
+            >
+              Projekt lenart.pl
+            </a>
+          </div>
           {onOpenAdminDialog && (
             <button
               type="button"

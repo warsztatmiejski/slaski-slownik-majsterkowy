@@ -13,6 +13,8 @@ import {
   Facebook,
   Linkedin,
   Twitter,
+  Instagram,
+  Pin,
   Copy,
 } from 'lucide-react'
 
@@ -137,7 +139,6 @@ function mapSearchResult(result: SearchResponse['results'][number]): EntryPrevie
 }
 
 export default function HomePage({
-  stats,
   featuredEntry,
   recentEntries,
   categories,
@@ -233,7 +234,10 @@ export default function HomePage({
   const shareLinks = useMemo(() => {
     if (!selectedEntry || !shareUrl) return []
     const encodedUrl = encodeURIComponent(shareUrl)
-    const shareText = encodeURIComponent(`Poznaj słowo "${selectedEntry.sourceWord}" w Śląskim Słowniku Majsterkowym.`)
+    const shareCopy = `Poznaj słowo "${selectedEntry.sourceWord}" w Śląskim Słowniku Majsterkowym.`
+    const shareText = encodeURIComponent(shareCopy)
+    const shareMedia = origin ? `${origin}/ssm-social.png` : ''
+    const encodedMedia = shareMedia ? encodeURIComponent(shareMedia) : ''
     return [
       {
         name: 'Facebook',
@@ -250,8 +254,18 @@ export default function HomePage({
         href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
         icon: Linkedin,
       },
+      {
+        name: 'Instagram',
+        href: `https://www.instagram.com/?url=${encodedUrl}`,
+        icon: Instagram,
+      },
+      {
+        name: 'Pinterest',
+        href: `https://pinterest.com/pin/create/button/?url=${encodedUrl}&description=${shareText}${encodedMedia ? `&media=${encodedMedia}` : ''}`,
+        icon: Pin,
+      },
     ]
-  }, [selectedEntry, shareUrl])
+  }, [origin, selectedEntry, shareUrl])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -634,12 +648,12 @@ export default function HomePage({
       <button
         type="button"
         onClick={() => handleSelectEntry(randomEntry)}
-        className="w-full cursor-pointer space-y-2 text-left hover:[&>*]:text-primary [&>*]:transition-colors"
+        className="w-full cursor-pointer md:space-y-2 text-left hover:[&>*]:text-primary [&>*]:transition-colors"
       >
         <p className="text-md md:text-xl font-medium text-slate-900">
           Czy wiesz co po śląsku znaczy
         </p>
-        <p className="text-2xl md:text-4xl font-bold text-slate-900">
+        <p className="text-3xl md:text-4xl font-bold text-slate-900">
           {randomEntry.sourceWord}?
         </p>
         <p className="text-right text-sm font-semibold">Sprawdź →</p>
@@ -703,7 +717,7 @@ export default function HomePage({
     <div className="min-h-screen bg-white bg-[url('/bg-hex-2.png')] bg-top bg-no-repeat text-slate-900 transition-colors">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 md:gap-12 md:py-14 md:flex-row">
         <aside className="md:w-1/3 md:sticky md:top-10">
-          <div className="flex flex-col gap-6 pb-6 md:gap-10 md:pb-0">
+          <div className="flex flex-col gap-6 md:gap-10">
             <Header />
                     <div className="mt-2 pb-4 border-b-2 border-black">
                       {renderRandomEntryCard() ?? (
@@ -718,8 +732,8 @@ export default function HomePage({
         <main className="md:w-2/3">
           <div className="flex flex-col gap-10">
 
-            <section className="flex flex-wrap items-stretch gap-6 md:mt-2 md:flex-row md:items-start md:justify-between">
-              <p className="text-lg min-w-[180px] flex-1 md:max-w-xl font-bold md:text-2xl text-slate-900">
+            <section className="flex flex-wrap items-stretch md:mt-2 md:flex-row md:items-start md:justify-between">
+              <p className="text-lg font-bold md:max-w-xl md:text-2xl md:mt-1 text-slate-900">
                 Techniczny słownik śląsko-polski rozwijany przez społeczność i ekspertów branżowych.
               </p>
             </section>
@@ -913,11 +927,11 @@ export default function HomePage({
 
                       <Separator className="h-px bg-slate-900/20" />
 
-                      <div className="space-y-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Udostępnij hasło
-                        </p>
-                        <div className="flex flex-wrap items-center gap-3">
+                        <div className="space-y-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                            Udostępnij hasło
+                          </p>
+                        <div className="flex flex-wrap items-center gap-2">
                           {shareLinks.map(link => {
                             const Icon = link.icon
                             return (
@@ -926,10 +940,12 @@ export default function HomePage({
                                 href={link.href}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 rounded-sm border border-slate-900 px-3 py-1 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary"
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-slate-900 text-slate-900 transition-colors hover:border-primary hover:text-primary"
+                                aria-label={link.name}
+                                title={link.name}
                               >
                                 <Icon className="h-4 w-4" />
-                                {link.name}
+                                <span className="sr-only">{link.name}</span>
                               </a>
                             )
                           })}
@@ -937,10 +953,12 @@ export default function HomePage({
                             type="button"
                             onClick={handleCopyShareLink}
                             disabled={!shareUrl}
-                            className="inline-flex items-center gap-2 rounded-sm border border-slate-900 px-3 py-1 text-sm font-semibold text-slate-900 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-slate-900 text-slate-900 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                            aria-label={shareCopied ? 'Skopiowano link' : 'Kopiuj link'}
+                            title={shareCopied ? 'Skopiowano link' : 'Kopiuj link'}
                           >
                             <Copy className="h-4 w-4" />
-                            {shareCopied ? 'Skopiowano!' : 'Kopiuj link'}
+                            <span className="sr-only">{shareCopied ? 'Skopiowano link' : 'Kopiuj link'}</span>
                           </button>
                         </div>
                       </div>

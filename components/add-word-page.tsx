@@ -147,7 +147,7 @@ export default function AddWordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white bg-[url('/bg-hex.png')] bg-top bg-no-repeat text-slate-900 transition-colors">
+    <div className="min-h-screen bg-white bg-[url('/bg-hex-2.png')] bg-top bg-no-repeat text-slate-900 transition-colors">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-12 px-4 py-14 md:flex-row">
         <aside className="md:w-1/3 md:sticky md:top-10">
           <Header />
