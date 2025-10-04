@@ -21,14 +21,21 @@ export default function Footer({ onOpenAdminDialog }: FooterProps) {
 
         <div className="flex flex-wrap items-center justify-between gap-6 text-xs uppercase tracking-[0.18em] text-slate-500">
           <div className="flex flex-wrap items-center gap-6">
-            <span>&#169; 2025 Warsztat Miejski</span>
+            <a
+              href="https://warsztatmiejski.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium hover:text-primary"
+            >
+              &#169; 2025 Warsztat Miejski
+            </a>
             <a
               href="https://typotheque.com/fonts/plotter"
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium hover:text-primary"
             >
-              Font Plotter od Typotheque
+              Fonty Plotter od Typotheque
             </a>
             <a
               href="https://lenart.pl"
@@ -36,14 +43,14 @@ export default function Footer({ onOpenAdminDialog }: FooterProps) {
               rel="noopener noreferrer"
               className="font-medium hover:text-primary"
             >
-              Projekt lenart.pl
+              Design lenart.pl
             </a>
           </div>
           {onOpenAdminDialog && (
             <button
               type="button"
               onClick={onOpenAdminDialog}
-              className="font-medium hover:text-primary"
+              className="font-medium hover:text-primary cursor-pointer"
             >
               ADMIN
             </button>
