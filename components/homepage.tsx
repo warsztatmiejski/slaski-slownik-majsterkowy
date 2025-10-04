@@ -345,6 +345,7 @@ export default function HomePage({
     setSelectedEntry(entry)
     setSuggestions([])
     setSearchError(null)
+    setSearchTerm(entry.sourceWord)
     closeCategoryPanel()
     updateUrlWithEntry(entry.slug)
   }
@@ -753,7 +754,7 @@ export default function HomePage({
                   )}
                 </div>
                 {(suggestions.length > 0 || searchError || isFetchingSuggestions) && (
-                  <div className="max-h-64 overflow-y-auto rounded-md border border-slate-900/20 bg-white/90 shadow-lg">
+                  <div className="max-h-64 overflow-y-auto px-2 rounded-sm border border-slate-900/20 bg-white/90 shadow-lg">
                     {isFetchingSuggestions && suggestions.length === 0 && !searchError ? (
                       <div className="space-y-3 p-4">
                         <Skeleton className="h-4 w-2/5" />
