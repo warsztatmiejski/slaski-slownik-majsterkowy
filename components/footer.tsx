@@ -35,7 +35,7 @@ export default function Footer({ onOpenAdminDialog }: FooterProps) {
               rel="noopener noreferrer"
               className="font-medium hover:text-primary"
             >
-              Fonty Plotter od Typotheque
+              Typografia: Plotter / typotheque.com
             </a>
             <a
               href="https://lenart.pl"
@@ -43,7 +43,7 @@ export default function Footer({ onOpenAdminDialog }: FooterProps) {
               rel="noopener noreferrer"
               className="font-medium hover:text-primary"
             >
-              Design lenart.pl
+              Design & Web: lenart.pl
             </a>
           </div>
           {onOpenAdminDialog && (
