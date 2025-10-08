@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
@@ -16,6 +16,14 @@ interface ExampleSentence {
   id: string
   sourceText: string
   translatedText: string
+}
+
+interface CategoryOption {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  type?: string
 }
 
 interface SubmissionForm {
@@ -31,16 +39,6 @@ interface SubmissionForm {
   newCategoryName: string
   isSuggestingCategory: boolean
 }
-
-const categories = [
-  { id: 'gornictwo', name: 'Górnictwo', type: 'traditional' },
-  { id: 'hutnictwo', name: 'Hutnictwo', type: 'traditional' },
-  { id: 'inzynieria', name: 'Inżynieria', type: 'traditional' },
-  { id: 'produkcja', name: 'Produkcja', type: 'traditional' },
-  { id: 'informatyka', name: 'Informatyka', type: 'modern' },
-  { id: 'elektronika', name: 'Elektronika', type: 'modern' },
-  { id: 'telekomunikacja', name: 'Telekomunikacja', type: 'modern' },
-]
 
 const partsOfSpeech = [
   'rzeczownik',
@@ -85,6 +83,46 @@ export default function AddWordPage() {
   const [form, setForm] = useState<SubmissionForm>(createInitialForm)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([])
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+  const [categoryFetchError, setCategoryFetchError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    const loadCategories = async () => {
+      try {
+        setIsLoadingCategories(true)
+        setCategoryFetchError(null)
+
+        const response = await fetch('/api/categories', { signal: controller.signal })
+
+        if (!response.ok) {
+          throw new Error('Failed to load categories')
+        }
+
+        const data = (await response.json()) as { categories?: CategoryOption[] }
+
+        if (!controller.signal.aborted) {
+          setCategoryOptions(data.categories ?? [])
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error('Categories fetch failed:', error)
+          setCategoryOptions([])
+          setCategoryFetchError('Nie udało się pobrać listy kategorii. Spróbuj ponownie później.')
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoadingCategories(false)
+        }
+      }
+    }
+
+    loadCategories()
+
+    return () => controller.abort()
+  }, [])
 
   const resetForm = () => {
     setForm(createInitialForm())
@@ -154,15 +192,15 @@ export default function AddWordPage() {
         </aside>
 
         <main className="md:w-2/3">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-10">
             <div className="space-y-3">
-              <p className="text-3xl font-bold uppercase tracking-[0.24em]">Zgłoś nowe słowo do słownika</p>
-              <p className="text-sm text-slate-600">
+              <p className="text-lg font-bold md:max-w-xl md:text-2xl md:mt-3 text-slate-900">Zgłoś nowe słowo do słownika</p>
+              <p className="text-md text-slate-600">
                 Podziel się terminem, który powinien trafić do Śląskiego Słownika Majsterkowego.
               </p>
             </div>
 
-            <section className="space-y-6 p-6 md:p-8 bg-red-200/50">
+            <section className="space-y-6 p-6 md:p-8 bg-secondary/75">
               <div className="space-y-2">
                 <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Podstawowe informacje</h2>
                 <p className="text-sm text-slate-600">
@@ -233,12 +271,27 @@ export default function AddWordPage() {
                       <SelectValue placeholder="Wybierz kategorię" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map(category => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
+                      {isLoadingCategories ? (
+                        <SelectItem value="__loading__" disabled>
+                          Ładowanie kategorii…
                         </SelectItem>
-                      ))}
-                      <Separator className="my-1" />
+                      ) : categoryOptions.length > 0 ? (
+                        categoryOptions.map(category => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="__empty__" disabled>
+                          Brak dostępnych kategorii
+                        </SelectItem>
+                      )}
+                      {categoryFetchError && !isLoadingCategories && (
+                        <SelectLabel className="text-xs text-red-600">
+                          {categoryFetchError}
+                        </SelectLabel>
+                      )}
+                      <SelectSeparator className="my-1" />
                       <SelectItem value="__new__">
                         <span className="flex items-center gap-2">
                           <Plus className="h-4 w-4" />
@@ -258,6 +311,11 @@ export default function AddWordPage() {
                   {form.isSuggestingCategory && (
                     <p className="text-xs text-slate-600">
                       Wpis zostanie oznaczony, że proponujesz nową kategorię – podaj jej nazwę powyżej.
+                    </p>
+                  )}
+                  {!isLoadingCategories && !form.isSuggestingCategory && !form.categoryId && categoryOptions.length === 0 && (
+                    <p className="text-xs text-slate-600">
+                      Brak aktywnych kategorii – wybierz „Dodaj nową...” aby zaproponować kategorię.
                     </p>
                   )}
                 </div>
@@ -281,7 +339,7 @@ export default function AddWordPage() {
 
             <Separator className={separatorStyles} />
 
-            <section className="space-y-6 p-6 md:p-8 bg-amber-200/50">
+            <section className="space-y-6 p-6 md:p-8 bg-accent/75">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Przykłady użycia</h2>
                 <Button type="button" variant="outline" onClick={addExampleSentence}>
@@ -333,7 +391,7 @@ export default function AddWordPage() {
 
             <Separator className={separatorStyles} />
 
-            <section className="space-y-6 p-6 md:p-8 bg-slate-200/50">
+            <section className="space-y-6 p-6 md:p-8 bg-slate-300/75">
               <div className="space-y-2">
                 <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Informacje dodatkowe (opcjonalnie)</h2>
                 <p className="text-sm text-slate-600">

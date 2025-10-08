@@ -133,12 +133,24 @@ async function getEntryForMetadata(slug: string): Promise<EntryPreview | null> {
   return matched ? mapEntry(matched) : null
 }
 
+type SearchParamsInput =
+  | Record<string, string | string[] | undefined>
+  | Promise<Record<string, string | string[] | undefined>>
+
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>
+  searchParams: SearchParamsInput
 }): Promise<Metadata> {
-  const searchValue = searchParams?.s
+  const resolvedSearchParams = await searchParams
+  const viewParam = resolvedSearchParams?.view
+  const view = Array.isArray(viewParam) ? viewParam[0] : viewParam
+
+  if (view === 'categories') {
+    return createBaseMetadata('/kategorie')
+  }
+
+  const searchValue = resolvedSearchParams?.s
   const rawSlug = Array.isArray(searchValue) ? searchValue[0] : searchValue
 
   if (!rawSlug) {
@@ -190,7 +202,13 @@ export async function generateMetadata({
 export default async function Page() {
   const today = startOfToday()
 
-  const [statsData, recentEntriesRaw, featuredEntryRaw, categories] = await Promise.all([
+  const [
+    statsData,
+    recentEntriesRaw,
+    featuredEntryRaw,
+    categories,
+    categoryEntryCounts,
+  ] = await Promise.all([
     Promise.all([
       prisma.dictionaryEntry.count({
         where: { status: EntryStatus.APPROVED },
@@ -236,6 +254,13 @@ export default async function Page() {
     prisma.category.findMany({
       orderBy: { name: 'asc' },
     }),
+    prisma.dictionaryEntry.groupBy({
+      by: ['categoryId'],
+      where: { status: EntryStatus.APPROVED },
+      _count: {
+        _all: true,
+      },
+    }),
   ])
 
   const [totalEntries, pendingSubmissions, approvedToday, rejectedToday] = statsData
@@ -243,12 +268,17 @@ export default async function Page() {
   const recentEntries = recentEntriesRaw.map(mapEntry)
   const featuredEntry = featuredEntryRaw ? mapEntry(featuredEntryRaw) : null
 
+  const categoryEntryCountMap = new Map<string, number>(
+    categoryEntryCounts.map(entry => [entry.categoryId, entry._count._all]),
+  )
+
   const categoryList: HomePageProps['categories'] = categories.map(category => ({
     id: category.id,
     name: category.name,
     slug: category.slug,
     description: category.description ?? undefined,
     type: category.type,
+    entryCount: categoryEntryCountMap.get(category.id) ?? 0,
   }))
 
   const adminCredentials =
