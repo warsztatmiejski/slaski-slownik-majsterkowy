@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { EntryStatus } from '@prisma/client'
 import { createSlug } from '@/lib/utils'
+import { ensureAdminRequest } from '@/lib/auth'
 
 interface ExampleSentencePayload {
   id?: string
@@ -33,6 +34,11 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
+  const unauthorized = ensureAdminRequest(request)
+  if (unauthorized) {
+    return unauthorized
+  }
+
   try {
     const { id } = params
     const payload = (await request.json()) as UpdateEntryPayload

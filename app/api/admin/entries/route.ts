@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { EntryStatus, Prisma } from '@prisma/client'
+import { ensureAdminRequest } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
+  const unauthorized = ensureAdminRequest(request)
+  if (unauthorized) {
+    return unauthorized
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams
     const search = searchParams.get('search')?.trim()

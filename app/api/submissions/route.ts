@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Language, SubmissionStatus } from '@prisma/client'
+import { ensureAdminRequest } from '@/lib/auth'
 
 interface SubmissionData {
   sourceWord: string
@@ -109,6 +110,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const unauthorized = ensureAdminRequest(request)
+  if (unauthorized) {
+    return unauthorized
+  }
+
   try {
 	const searchParams = request.nextUrl.searchParams
 	const status = searchParams.get('status') as SubmissionStatus | null

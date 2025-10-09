@@ -1,6 +1,7 @@
 'use client'
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   Search,
@@ -13,6 +14,7 @@ import {
   BookOpen,
   Clock,
   Loader2,
+  LogOut,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -126,6 +128,24 @@ export default function AdminDashboard() {
   const [entryForm, setEntryForm] = useState<EntryFormState | null>(null)
   const [entryError, setEntryError] = useState<string | null>(null)
   const [isSavingEntry, setIsSavingEntry] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const router = useRouter()
+
+  const handleLogout = useCallback(async () => {
+    try {
+      setIsLoggingOut(true)
+      const response = await fetch('/api/admin/logout', { method: 'POST' })
+      if (!response.ok) {
+        throw new Error('Logout failed')
+      }
+      router.replace('/admin/login')
+      router.refresh()
+    } catch (error) {
+      console.error('Admin logout failed:', error)
+      setGlobalError('Nie udało się wylogować. Odśwież stronę i spróbuj ponownie.')
+      setIsLoggingOut(false)
+    }
+  }, [router])
 
   const refreshStats = useCallback(async () => {
     const data = await DictionaryAPI.getAdminStats()
@@ -386,6 +406,19 @@ export default function AdminDashboard() {
                   <Plus className="mr-2 h-4 w-4" />
                   Dodaj wpis
                 </Link>
+              </Button>
+              <Button variant="destructive" onClick={handleLogout} disabled={isLoggingOut}>
+                {isLoggingOut ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Wylogowywanie…
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <LogOut className="h-4 w-4" />
+                    Wyloguj
+                  </span>
+                )}
               </Button>
             </div>
           </div>

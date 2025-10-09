@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { EntryStatus, SubmissionStatus } from '@prisma/client'
 import type { PrismaClient } from '@prisma/client'
 import { createSlug } from '@/lib/utils'
+import { ensureAdminRequest } from '@/lib/auth'
 
 async function generateUniqueSlug(base: string, client: PrismaClient = prisma) {
   const fallback = base || `haslo-${Date.now()}`
@@ -31,6 +32,11 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const unauthorized = ensureAdminRequest(request)
+  if (unauthorized) {
+    return unauthorized
+  }
+
   try {
 	const { action, reviewNotes, adminId }: ReviewData = await request.json()
 	const submissionId = params.id

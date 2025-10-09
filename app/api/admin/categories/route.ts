@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createSlug } from '@/lib/utils'
 import { CategoryType } from '@prisma/client'
+import { ensureAdminRequest } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const unauthorized = ensureAdminRequest(request)
+  if (unauthorized) {
+    return unauthorized
+  }
+
   try {
     const {
       name,
@@ -58,6 +64,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const unauthorized = ensureAdminRequest(request)
+  if (unauthorized) {
+    return unauthorized
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams
     const id = searchParams.get('id')

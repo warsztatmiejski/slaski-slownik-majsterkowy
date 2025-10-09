@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { EntryStatus, SubmissionStatus } from '@prisma/client'
+import { ensureAdminRequest } from '@/lib/auth'
 
 function startOfToday(): Date {
   const now = new Date()
@@ -8,7 +9,12 @@ function startOfToday(): Date {
   return now
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const unauthorized = ensureAdminRequest(request)
+  if (unauthorized) {
+    return unauthorized
+  }
+
   try {
     const today = startOfToday()
 

@@ -1,23 +1,27 @@
 "use client";
 
 import {
-	startTransition,
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
+    FormEvent,
+    startTransition,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
 	Search,
 	Sparkles,
+	ChevronDown,
 	ChevronRight,
 	Loader2,
 	Hammer,
 	List,
 	ChevronLeft,
+	ArrowDown,
+	ArrowRight,
 	Facebook,
 	Linkedin,
 	Twitter,
@@ -176,11 +180,9 @@ function mapSearchResult(
 }
 
 export default function HomePage({
-	featuredEntry,
-	recentEntries,
-	categories,
-	adminCredentials,
-	showAdminCredentials = false,
+    featuredEntry,
+    recentEntries,
+    categories,
 }: HomePageProps) {
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -224,13 +226,21 @@ export default function HomePage({
 	);
 	const [hasFetchedIndex, setHasFetchedIndex] = useState(false);
 	const [origin, setOrigin] = useState("");
-	const [shareCopied, setShareCopied] = useState(false);
-	const lastCategorySlugRef = useRef<string | null>(null);
-	const copyResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-		null
-	);
-	const pendingIndexLetterRef = useRef<string | null>(null);
-	const pendingCategoryOpenRef = useRef(false);
+const [shareCopied, setShareCopied] = useState(false);
+const lastCategorySlugRef = useRef<string | null>(null);
+const copyResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+);
+const pendingIndexLetterRef = useRef<string | null>(null);
+const pendingCategoryOpenRef = useRef(false);
+const translationSectionRef = useRef<HTMLDivElement | null>(null);
+const suppressSuggestionsRef = useRef(false);
+const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+const [isCheckingAdminSession, setIsCheckingAdminSession] = useState(true);
+const [adminEmailInput, setAdminEmailInput] = useState("");
+const [adminPasswordInput, setAdminPasswordInput] = useState("");
+const [isAdminLoggingIn, setIsAdminLoggingIn] = useState(false);
+const [adminLoginError, setAdminLoginError] = useState<string | null>(null);
 	const markCategoryPanelForRestore = useCallback(() => {
 		if (typeof window === "undefined") {
 			return;
@@ -238,9 +248,28 @@ export default function HomePage({
 		sessionStorage.setItem(CATEGORY_PANEL_STORAGE_KEY, "1");
 	}, []);
 
-	const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
-		featuredEntry ?? recentEntries[0] ?? null
-	);
+const checkAdminSession = useCallback(async () => {
+    try {
+        setIsCheckingAdminSession(true);
+        const response = await fetch("/api/admin/session", {
+            credentials: "include",
+        });
+        if (!response.ok) {
+            throw new Error("Session check failed");
+        }
+        const data = (await response.json()) as { authenticated: boolean };
+        setIsAdminAuthenticated(Boolean(data.authenticated));
+    } catch (error) {
+        console.error("Admin session check failed:", error);
+        setIsAdminAuthenticated(false);
+    } finally {
+        setIsCheckingAdminSession(false);
+    }
+}, []);
+
+const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
+    featuredEntry ?? recentEntries[0] ?? null
+);
 
 	useEffect(() => {
 		const pool = [featuredEntry, ...recentEntries].filter(
@@ -378,25 +407,60 @@ export default function HomePage({
 	const replaceUrlWithParams = useCallback(
 		(basePath: string, params?: URLSearchParams) => {
 			const queryString = params?.toString() ?? "";
+			const nextUrl = `${basePath}${queryString ? `?${queryString}` : ""}`;
+
+			if (typeof window !== "undefined") {
+				const currentUrl = `${window.location.pathname}${
+					window.location.search ? window.location.search : ""
+				}`;
+				if (currentUrl === nextUrl) {
+					return;
+				}
+			}
+
 			startTransition(() => {
-				router.replace(`${basePath}${queryString ? `?${queryString}` : ""}`, {
-					scroll: false,
-				});
+				router.replace(nextUrl, { scroll: false });
 			});
 		},
 		[router]
 	);
 
-	const createSanitizedParams = useCallback(() => {
-		const params = new URLSearchParams(searchParams.toString());
-		params.delete("s");
-		params.delete("k");
-		return params;
-	}, [searchParams]);
+const createSanitizedParams = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("s");
+    params.delete("k");
+    params.delete("admin");
+    return params;
+}, [searchParams]);
 
-	useEffect(() => {
-		setIsIndexOpen(pathSegments[0] === "indeks");
-	}, [pathSegments]);
+useEffect(() => {
+    setIsIndexOpen(pathSegments[0] === "indeks");
+}, [pathSegments]);
+
+useEffect(() => {
+    void checkAdminSession();
+}, [checkAdminSession]);
+
+useEffect(() => {
+    if (isAdminDialogOpen) {
+        void checkAdminSession();
+    }
+}, [isAdminDialogOpen, checkAdminSession]);
+
+useEffect(() => {
+    if (!isAdminDialogOpen) {
+        setAdminLoginError(null);
+        setIsAdminLoggingIn(false);
+    }
+}, [isAdminDialogOpen]);
+
+useEffect(() => {
+    if (searchParams.get("admin") === "1") {
+        setIsAdminDialogOpen(true);
+        const params = createSanitizedParams();
+        replaceUrlWithParams("/", params);
+    }
+}, [searchParams, createSanitizedParams, replaceUrlWithParams]);
 
 	useEffect(() => {
 		if (pathSegments[0] === "kategorie") {
@@ -711,6 +775,7 @@ export default function HomePage({
 	};
 
 	const handleSelectEntry = (entry: EntryPreview) => {
+		suppressSuggestionsRef.current = true;
 		setSelectedEntry(entry);
 		setSuggestions([]);
 		setSearchError(null);
@@ -728,10 +793,10 @@ export default function HomePage({
 		handleSelectEntry(entry);
 	};
 
-	const handleCopyShareLink = async () => {
-		if (!shareUrl) {
-			return;
-		}
+const handleCopyShareLink = async () => {
+    if (!shareUrl) {
+        return;
+    }
 
 		try {
 			await navigator.clipboard.writeText(shareUrl);
@@ -744,8 +809,58 @@ export default function HomePage({
 			}, 2000);
 		} catch (error) {
 			console.error("Copy share link failed:", error);
-		}
-	};
+    }
+};
+
+const handleAdminLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isAdminLoggingIn) {
+        return;
+    }
+
+    setIsAdminLoggingIn(true);
+    setAdminLoginError(null);
+
+    try {
+        const response = await fetch("/api/admin/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+                email: adminEmailInput.trim(),
+                password: adminPasswordInput,
+            }),
+        });
+
+        if (!response.ok) {
+            const data = (await response
+                .json()
+                .catch(() => ({ error: "Nie udało się zalogować." }))) as {
+                error?: string;
+            };
+            setAdminLoginError(data.error || "Nie udało się zalogować.");
+            setIsAdminLoggingIn(false);
+            return;
+        }
+
+        setAdminEmailInput("");
+        setAdminPasswordInput("");
+        setAdminLoginError(null);
+        setIsAdminAuthenticated(true);
+        setIsAdminLoggingIn(false);
+        setIsAdminDialogOpen(false);
+        router.push("/admin");
+        router.refresh();
+    } catch (error) {
+        console.error("Admin login failed:", error);
+        setAdminLoginError(
+            "Wystąpił błąd podczas logowania. Spróbuj ponownie później."
+        );
+        setIsAdminLoggingIn(false);
+    }
+};
 
 	const loadSuggestions = useCallback(
 		async ({
@@ -902,6 +1017,58 @@ export default function HomePage({
 	}, [activeWordSlug, selectedEntry]);
 
 	useEffect(() => {
+		if (!selectedEntry) {
+			return;
+		}
+
+		if (typeof window === "undefined") {
+			return;
+		}
+
+		const isSingleColumn =
+			window.matchMedia("(max-width: 767px)").matches ||
+			window.innerWidth < 768;
+
+		if (!isSingleColumn) {
+			return;
+		}
+
+		const element = translationSectionRef.current;
+
+		if (!element) {
+			return;
+		}
+
+		const prefersReducedMotion = window.matchMedia(
+			"(prefers-reduced-motion: reduce)"
+		).matches;
+
+		const timeoutId = window.setTimeout(() => {
+			element.scrollIntoView({
+				behavior: prefersReducedMotion ? "auto" : "smooth",
+				block: "start",
+			});
+
+			const offset = 64;
+			const adjustScroll = () => {
+				window.scrollBy({
+					top: -offset,
+					left: 0,
+					behavior: prefersReducedMotion ? "auto" : "smooth",
+				});
+			};
+
+			if (prefersReducedMotion) {
+				adjustScroll();
+			} else {
+				window.requestAnimationFrame(adjustScroll);
+			}
+		}, 100);
+
+		return () => window.clearTimeout(timeoutId);
+	}, [selectedEntry]);
+
+	useEffect(() => {
 		if (!activeCategorySlugFromPath) {
 			lastCategorySlugRef.current = null;
 			setActiveCategory((prev) => (prev !== null ? null : prev));
@@ -959,6 +1126,11 @@ export default function HomePage({
 
 	useEffect(() => {
 		const query = searchTerm.trim();
+
+		if (suppressSuggestionsRef.current) {
+			suppressSuggestionsRef.current = false;
+			return;
+		}
 
 		if (!query) {
 			if (!activeCategory) {
@@ -1073,17 +1245,22 @@ export default function HomePage({
 				type="button"
 				onClick={() => handleCategoryClick(category.slug)}
 				className={cn(
-					"flex w-full items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold uppercase transition-colors",
+					"flex w-full cursor-pointer items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold uppercase transition-colors",
 					isActive
 						? "bg-primary/10 border-primary text-primary"
 						: "text-slate-900 hover:bg-white/25 hover:text-primary hover:border-primary"
 				)}
 			>
-				<span>{`${category.name}${countLabel}`}</span>
+				<span className="text-left">{`${category.name}${countLabel}`}</span>
 				{pendingCategoryFetch === category.slug ? (
 					<Loader2 className="h-4 w-4 animate-spin" />
 				) : (
-					<ChevronRight className="h-4 w-4" />
+					<ChevronRight
+						className={cn(
+							"h-4 w-4 transition-transform",
+							isActive ? "text-primary" : "text-slate-900"
+						)}
+					/>
 				)}
 			</button>
 		);
@@ -1094,15 +1271,22 @@ export default function HomePage({
 			<button
 				type="button"
 				onClick={() => handleSelectEntry(randomEntry)}
-				className="w-full cursor-pointer md:space-y-2 text-left hover:[&>*]:text-primary [&>*]:transition-colors"
+				className="w-full cursor-pointer text-left transition text-slate-900 hover:[&>*]:text-primary [&>*]:transition-colors"
 			>
-				<p className="text-md md:text-xl font-medium text-slate-900">
-					Czy wiesz co po śląsku znaczy
-				</p>
-				<p className="text-3xl md:text-4xl font-bold text-slate-900">
-					{randomEntry.sourceWord}?
-				</p>
-				<p className="text-right text-sm font-semibold">Sprawdź →</p>
+				<div className="flex items-end justify-between gap-2">
+					<div className="flex flex-col gap-1">
+						<p className="text-sm md:text-lg font-medium transition-colors">
+							Czy wiesz co po śląsku znaczy
+						</p>
+						<p className="text-2xl md:text-4xl font-bold transition-colors">
+							{randomEntry.sourceWord}?
+						</p>
+					</div>
+					<div className="flex items-center justify-center transition-colors">
+						<ArrowDown className="h-6 w-6 md:hidden" />
+						<ArrowRight className="hidden h-6 w-6 md:block md:h-8 md:w-8" />
+					</div>
+				</div>
 			</button>
 		) : null;
 
@@ -1121,7 +1305,7 @@ export default function HomePage({
 				<button
 					type="button"
 					onClick={showCategoryList}
-					className="flex h-8 w-8 items-center justify-center rounded-sm border border-slate-900 text-slate-900 transition-colors hover:border-primary hover:bg-white/25 hover:text-primary"
+					className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-sm border border-slate-900 text-slate-900 transition-colors hover:border-primary hover:bg-white/25 hover:text-primary"
 					aria-label="Wróć do listy kategorii"
 				>
 					<ChevronLeft className="h-4 w-4" />
@@ -1155,7 +1339,7 @@ export default function HomePage({
 							key={entry.id}
 							type="button"
 							onClick={() => handleSelectEntry(entry)}
-							className="w-full border-b border-slate-900 px-0 py-2 text-left text-sm font-medium text-slate-900 transition-colors hover:text-primary"
+							className="w-full cursor-pointer border-b border-slate-900 px-0 py-2 text-left text-sm font-medium text-slate-900 transition-colors hover:text-primary"
 						>
 							{entry.sourceWord}
 						</button>
@@ -1215,7 +1399,7 @@ export default function HomePage({
 			)}
 
 			{isFetchingIndex && indexEntries.length === 0 ? (
-				<div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+				<div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 					{Array.from({ length: 12 }).map((_, index) => (
 						<Skeleton key={index} className="h-24 w-full" />
 					))}
@@ -1223,7 +1407,7 @@ export default function HomePage({
 			) : indexError ? (
 				<p className="text-sm text-red-600">{indexError}</p>
 			) : indexGroups.length > 0 ? (
-				<div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+				<div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 					{indexGroups.map((group) => (
 						<div
 							key={group.letter}
@@ -1243,7 +1427,7 @@ export default function HomePage({
 										key={entry.id}
 										type="button"
 										onClick={() => handleSelectEntry(entry)}
-										className="w-full mb-2 border-b border-slate-900 pb-1 text-left text-sm font-medium text-slate-900 transition-colors hover:text-primary hover:border-primary"
+										className="w-full cursor-pointer mb-2 border-b border-slate-900 pb-1 text-left text-sm font-medium text-slate-900 transition-colors hover:text-primary hover:border-primary"
 									>
 										{entry.sourceWord}
 									</button>
@@ -1268,7 +1452,7 @@ export default function HomePage({
 				<aside className="md:w-1/3 md:sticky md:top-10">
 					<div className="flex flex-col gap-6 md:gap-10">
 						<Header />
-						<div className="mt-2 pb-4 border-b-2 border-black">
+						<div className="mt-2 pb-2 md:mt-0 md:pb-4 border-b-2 border-black">
 							{renderRandomEntryCard() ?? (
 								<div className="rounded-sm border border-dashed border-slate-900/30 p-4 text-sm text-slate-600">
 									Brak wyróżnionego hasła.
@@ -1323,7 +1507,7 @@ export default function HomePage({
 														onMouseDown={(event) => event.preventDefault()}
 														onClick={() => handleSuggestionClick(entry)}
 														className={cn(
-															"w-full border-b border-slate-900 px-0 py-2 text-left text-sm transition-colors last:border-b-0",
+															"w-full cursor-pointer border-b border-slate-900 px-0 py-2 text-left text-sm transition-colors last:border-b-0",
 															isActive
 																? "font-semibold text-primary"
 																: "text-slate-900 hover:text-primary"
@@ -1357,30 +1541,30 @@ export default function HomePage({
 									<button
 										type="button"
 										onClick={handleCategoryToggle}
-										className="flex w-full flex-1 items-center justify-between gap-3 rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold uppercase text-slate-900 transition-colors hover:border-primary hover:bg-white/25 hover:text-primary"
+										className="flex w-full cursor-pointer flex-1 items-center justify-between gap-3 rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold uppercase text-slate-900 transition-colors hover:border-primary hover:bg-white/25 hover:text-primary"
 										aria-expanded={isCategoryPanelOpen}
 										aria-controls="categories-panel"
 									>
-										<span>Znajdź wg kategorii</span>
-										<ChevronRight
+										<span className="text-left">Znajdź wg kategorii</span>
+										<ChevronDown
 											className={cn(
-												"h-4 w-4 transition-transform",
-												isCategoryPanelOpen ? "rotate-90" : "rotate-0"
+												"h-5 w-5 flex-shrink-0 transition-transform",
+												isCategoryPanelOpen ? "-rotate-180" : "rotate-0"
 											)}
 										/>
 									</button>
 									<button
 										type="button"
 										onClick={handleIndexToggle}
-										className="flex w-full flex-1 items-center justify-between gap-3 rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold uppercase text-slate-900 transition-colors hover:border-primary hover:bg-white/25 hover:text-primary"
+										className="flex w-full cursor-pointer flex-1 items-center justify-between gap-3 rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold uppercase text-slate-900 transition-colors hover:border-primary hover:bg-white/25 hover:text-primary"
 										aria-expanded={isIndexOpen}
 										aria-controls="word-index"
 									>
-										<span>Indeks słów</span>
-										<ChevronRight
+										<span className="text-left">Indeks słów</span>
+										<ChevronDown
 											className={cn(
-												"h-4 w-4 transition-transform",
-												isIndexOpen ? "rotate-90" : "rotate-0"
+												"h-5 w-5 flex-shrink-0 transition-transform",
+												isIndexOpen ? "-rotate-180" : "rotate-0"
 											)}
 										/>
 									</button>
@@ -1389,7 +1573,7 @@ export default function HomePage({
 								{isCategoryPanelOpen && (
 									<div
 										id="categories-panel"
-										className="space-y-4 rounded-sm border border-slate-900 p-4"
+										className="space-y-4 p-4 rounded-sm border border-slate-900 bg-white/25"
 									>
 										{isCategoryView ? (
 											renderCategoryEntriesSection()
@@ -1427,7 +1611,7 @@ export default function HomePage({
 							{(isEntryLoading && !selectedEntry) || selectedEntry ? (
 								<>
 									{isEntryLoading && !selectedEntry ? (
-										<div className="space-y-6 mt-6">
+										<div ref={translationSectionRef} className="space-y-6 mt-6">
 											<div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-end">
 												<div className="space-y-3">
 													<Skeleton className="h-12 w-3/4" />
@@ -1571,14 +1755,14 @@ export default function HomePage({
 										<h3 className="text-xs uppercase tracking-[0.18em] text-slate-500">
 											Ostatnio dodane hasła
 										</h3>
-										<div className="mt-3 grid gap-2 sm:grid-cols-2">
+										<div className="mt-3 grid gap-2 grid-cols-2">
 											{recentSilesianEntries.length > 0 ? (
 												recentSilesianEntries.map((entry) => (
 													<button
 														key={entry.id}
 														type="button"
 														onClick={() => handleRecentClick(entry)}
-														className="w-full border-b border-slate-900 px-0 py-2 text-left text-sm font-medium text-slate-900 transition-colors hover:text-primary"
+														className="w-full cursor-pointer border-b border-slate-900 px-0 py-2 text-left text-sm font-medium text-slate-900 transition-colors hover:text-primary"
 													>
 														{entry.sourceWord}
 													</button>
@@ -1665,60 +1849,87 @@ export default function HomePage({
 			</div>
 
 			<Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
-				<DialogContent className="max-w-sm">
-					<DialogHeader>
-						<DialogTitle>Panel administratora</DialogTitle>
-						<DialogDescription>
-							Użyj poniższych danych, aby zalogować się do panelu moderacji.
-						</DialogDescription>
-					</DialogHeader>
-					{showAdminCredentials && adminCredentials ? (
-						<div className="space-y-4 py-2">
-							<div className="space-y-1">
-								<Label htmlFor="admin-email">Adres e-mail</Label>
-								<Input
-									id="admin-email"
-									value={adminCredentials.email}
-									readOnly
-									className="border-slate-300"
-								/>
-							</div>
-							<div className="space-y-1">
-								<Label htmlFor="admin-password">Hasło</Label>
-								<Input
-									id="admin-password"
-									type="password"
-									value={adminCredentials.password}
-									readOnly
-									className="border-slate-300"
-								/>
-							</div>
-						</div>
-					) : (
-						<div className="space-y-3 py-4 text-sm text-slate-600">
-							<p>
-								Aby uzyskać dostęp do panelu moderatora, użyj swoich danych
-								logowania. Jeśli ich nie posiadasz, skontaktuj się z
-								administratorem projektu.
-							</p>
-							<Button variant="outline" asChild>
-								<Link href="/admin">Przejdź do logowania</Link>
-							</Button>
-						</div>
-					)}
-					<DialogFooter>
-						<Button
-							variant="outline"
-							onClick={() => setIsAdminDialogOpen(false)}
-						>
-							Zamknij
-						</Button>
-						<Button asChild>
-							<Link href="/admin">Przejdź do panelu</Link>
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+            <DialogContent className="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Panel administratora</DialogTitle>
+                    <DialogDescription>
+                        Zaloguj się, aby zarządzać wpisami i zgłoszeniami.
+                    </DialogDescription>
+                </DialogHeader>
+
+                {isCheckingAdminSession ? (
+                    <div className="flex items-center justify-center gap-2 py-6 text-sm text-slate-600">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Sprawdzam status logowania…
+                    </div>
+                ) : isAdminAuthenticated ? (
+                    <div className="space-y-4 py-4 text-sm text-slate-600">
+                        <p>Jesteś zalogowany do panelu administratora.</p>
+                        <Button
+                            className="w-full"
+                            onClick={() => {
+                                setIsAdminDialogOpen(false);
+                                router.push("/admin");
+                                router.refresh();
+                            }}
+                        >
+                            Przejdź do panelu
+                        </Button>
+                    </div>
+                ) : (
+                    <form onSubmit={handleAdminLoginSubmit} className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="admin-dialog-email">Adres e-mail</Label>
+                            <Input
+                                id="admin-dialog-email"
+                                type="email"
+                                autoComplete="username"
+                                required
+                                value={adminEmailInput}
+                                onChange={(event) => setAdminEmailInput(event.target.value)}
+                                className="border-slate-300"
+                                placeholder="admin@example.com"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="admin-dialog-password">Hasło</Label>
+                            <Input
+                                id="admin-dialog-password"
+                                type="password"
+                                autoComplete="current-password"
+                                required
+                                value={adminPasswordInput}
+                                onChange={(event) => setAdminPasswordInput(event.target.value)}
+                                className="border-slate-300"
+                                placeholder="••••••••"
+                            />
+                        </div>
+                        {adminLoginError ? (
+                            <p className="text-sm text-red-600">{adminLoginError}</p>
+                        ) : null}
+                        <Button type="submit" disabled={isAdminLoggingIn} className="w-full">
+                            {isAdminLoggingIn ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Trwa logowanie…
+                                </span>
+                            ) : (
+                                "Zaloguj się"
+                            )}
+                        </Button>
+                    </form>
+                )}
+
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        onClick={() => setIsAdminDialogOpen(false)}
+                    >
+                        Zamknij
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
 			<Footer onOpenAdminDialog={() => setIsAdminDialogOpen(true)} />
 		</div>
