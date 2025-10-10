@@ -404,26 +404,29 @@ const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
 		[indexGroups]
 	);
 
-	const replaceUrlWithParams = useCallback(
-		(basePath: string, params?: URLSearchParams) => {
-			const queryString = params?.toString() ?? "";
-			const nextUrl = `${basePath}${queryString ? `?${queryString}` : ""}`;
+const replaceUrlWithParams = useCallback(
+	(basePath: string, params?: URLSearchParams) => {
+		const queryString = params?.toString() ?? "";
+		const nextUrl = `${basePath}${queryString ? `?${queryString}` : ""}`;
 
-			if (typeof window !== "undefined") {
-				const currentUrl = `${window.location.pathname}${
-					window.location.search ? window.location.search : ""
-				}`;
-				if (currentUrl === nextUrl) {
-					return;
-				}
+		if (typeof window !== "undefined") {
+			const currentPath = window.location.pathname;
+			const currentSearch = window.location.search;
+			const nextUrlObj = new URL(nextUrl, window.location.origin);
+			if (
+				currentPath === nextUrlObj.pathname &&
+				currentSearch === nextUrlObj.search
+			) {
+				return;
 			}
+		}
 
-			startTransition(() => {
-				router.replace(nextUrl, { scroll: false });
-			});
-		},
-		[router]
-	);
+		startTransition(() => {
+			router.replace(nextUrl, { scroll: false });
+		});
+	},
+	[router]
+);
 
 const createSanitizedParams = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -1016,57 +1019,64 @@ const handleAdminLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
 		};
 	}, [activeWordSlug, selectedEntry]);
 
-	useEffect(() => {
-		if (!selectedEntry) {
-			return;
-		}
+useEffect(() => {
+    if (!selectedEntry?.id) {
+        return;
+    }
 
-		if (typeof window === "undefined") {
-			return;
+    if (typeof window === "undefined") {
+        return;
 		}
 
 		const isSingleColumn =
 			window.matchMedia("(max-width: 767px)").matches ||
 			window.innerWidth < 768;
 
-		if (!isSingleColumn) {
-			return;
+	if (!isSingleColumn) {
+		return;
+	}
+
+	const element = translationSectionRef.current;
+
+	if (!element) {
+		return;
+	}
+
+const prefersReducedMotion = window.matchMedia(
+	"(prefers-reduced-motion: reduce)"
+).matches;
+
+const timeouts: number[] = [];
+const maxAttempts = 15;
+const retryDelay = 160;
+
+const attemptScroll = (attempt = 0) => {
+	const target = translationSectionRef.current;
+	if (!target) {
+		if (attempt < maxAttempts) {
+			const retryId = window.setTimeout(() => attemptScroll(attempt + 1), retryDelay);
+			timeouts.push(retryId);
 		}
+		return;
+	}
 
-		const element = translationSectionRef.current;
+	const rect = target.getBoundingClientRect();
+	const offset = 90;
+	const targetTop = Math.max(window.scrollY + rect.top - offset, 0);
+	window.scrollTo({
+		top: targetTop,
+		left: 0,
+		behavior: prefersReducedMotion ? "auto" : "smooth",
+	});
+};
 
-		if (!element) {
-			return;
-		}
+const initialTimeout = window.setTimeout(() => attemptScroll(0), 80);
+timeouts.push(initialTimeout);
 
-		const prefersReducedMotion = window.matchMedia(
-			"(prefers-reduced-motion: reduce)"
-		).matches;
-
-		const timeoutId = window.setTimeout(() => {
-			element.scrollIntoView({
-				behavior: prefersReducedMotion ? "auto" : "smooth",
-				block: "start",
-			});
-
-			const offset = 64;
-			const adjustScroll = () => {
-				window.scrollBy({
-					top: -offset,
-					left: 0,
-					behavior: prefersReducedMotion ? "auto" : "smooth",
-				});
-			};
-
-			if (prefersReducedMotion) {
-				adjustScroll();
-			} else {
-				window.requestAnimationFrame(adjustScroll);
-			}
-		}, 100);
-
-		return () => window.clearTimeout(timeoutId);
-	}, [selectedEntry]);
+return () => {
+	timeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
+};
+}, [selectedEntry?.id]);
 
 	useEffect(() => {
 		if (!activeCategorySlugFromPath) {
@@ -1637,7 +1647,11 @@ const handleAdminLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
 											</div>
 										</div>
 									) : selectedEntry ? (
-										<div className="space-y-6 mt-6">
+										<div
+											ref={translationSectionRef}
+											id="translation-section"
+											className="space-y-6 mt-6"
+										>
 											<div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
 												<div className="space-y-2">
 													<h3 className="mb-4 text-5xl font-semibold leading-tight text-primary md:text-6xl">

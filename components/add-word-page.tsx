@@ -45,11 +45,13 @@ const partsOfSpeech = [
   'czasownik',
   'przymiotnik',
   'przysłówek',
-  'wykrzyknienie',
+  'liczebnik',
   'zaimek',
-  'przyimek',
   'spójnik',
-  'fraza',
+  'przyimek',
+  'partykuła',
+  'imiesłów',
+  'wykrzyknik',
 ]
 
 const languageLabel: Record<'SILESIAN' | 'POLISH', string> = {
@@ -86,6 +88,7 @@ export default function AddWordPage() {
   const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
   const [categoryFetchError, setCategoryFetchError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -159,26 +162,92 @@ export default function AddWordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setSubmitError(null)
+
+    const trimmedNewCategoryName = form.newCategoryName.trim()
+    const isSuggestingCategory = form.isSuggestingCategory && trimmedNewCategoryName.length > 0
+
+    if (!form.categoryId && !isSuggestingCategory) {
+      setSubmitError('Wybierz kategorię z listy lub podaj nazwę nowej kategorii.')
+      setIsSubmitting(false)
+      return
+    }
+
+    if (isSuggestingCategory && trimmedNewCategoryName.length < 3) {
+      setSubmitError('Podaj pełną nazwę proponowanej kategorii (co najmniej 3 znaki).')
+      setIsSubmitting(false)
+      return
+    }
 
     try {
+      const translationParts = form.targetWord
+        .split(',')
+        .map(value => value.trim())
+        .filter(Boolean)
+
+      const primaryTarget = translationParts.shift() ?? ''
+      const alternativeTranslations = translationParts
+
+      const sanitizedExamples = form.exampleSentences
+        .map(example => ({
+          id: example.id,
+          sourceText: example.sourceText.trim(),
+          translatedText: example.translatedText.trim(),
+        }))
+        .filter(example => example.sourceText || example.translatedText)
+
+      if (!primaryTarget) {
+        throw new Error('Target word is required')
+      }
+
+      if (!sanitizedExamples[0] || !sanitizedExamples[0].sourceText || !sanitizedExamples[0].translatedText) {
+        throw new Error('At least one example sentence is required')
+      }
+
       const suggestedCategoryNote =
         form.isSuggestingCategory && form.newCategoryName.trim().length > 0
           ? `Propozycja nowej kategorii: ${form.newCategoryName.trim()}`
           : null
-      const combinedNotes = [form.notes.trim(), suggestedCategoryNote]
-        .filter(Boolean)
-        .join('\n')
+      const noteLines = [form.notes.trim(), suggestedCategoryNote]
+      if (alternativeTranslations.length) {
+        noteLines.push(`Alternatywne tłumaczenia: ${alternativeTranslations.join(', ')}`)
+      }
+      const combinedNotes = noteLines.filter(Boolean).join('\n')
 
-      console.log('Symulated submission payload', {
+      const payload = {
         ...form,
+        sourceWord: form.sourceWord.trim(),
+        targetWord: primaryTarget,
+        alternativeTranslations,
+        exampleSentences: sanitizedExamples,
         notes: combinedNotes,
+        categoryId: form.categoryId,
+        newCategoryName: isSuggestingCategory ? trimmedNewCategoryName : undefined,
+        isSuggestingCategory,
+      }
+
+      const response = await fetch('/api/submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       })
 
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Nie udało się wysłać zgłoszenia.' }))
+        throw new Error(data.error || 'Nie udało się wysłać zgłoszenia.')
+      }
+
       setSubmitSuccess(true)
       setForm(createInitialForm())
     } catch (error) {
       console.error('Submission failed:', error)
+      setSubmitError(
+        error instanceof Error
+          ? error.message || 'Wystąpił błąd podczas zapisu zgłoszenia.'
+          : 'Wystąpił błąd podczas zapisu zgłoszenia.',
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -186,7 +255,7 @@ export default function AddWordPage() {
 
   return (
     <div className="min-h-screen bg-white bg-[url('/bg-hex-2.png')] bg-top bg-no-repeat text-slate-900 transition-colors">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-12 px-4 py-14 md:flex-row">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 md:gap-12 md:py-14 md:flex-row">
         <aside className="md:w-1/3 md:sticky md:top-10">
           <Header />
         </aside>
@@ -198,7 +267,16 @@ export default function AddWordPage() {
               <p className="text-md text-slate-600">
                 Podziel się terminem, który powinien trafić do Śląskiego Słownika Majsterkowego.
               </p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Pola oznaczone <span className="text-primary">*</span> są wymagane.
+              </p>
             </div>
+
+            {submitError && (
+              <div className="rounded-sm border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+                {submitError}
+              </div>
+            )}
 
             <section className="space-y-6 p-6 md:p-8 bg-secondary/75">
               <div className="space-y-2">
@@ -209,7 +287,9 @@ export default function AddWordPage() {
               </div>
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">{languageLabel[form.sourceLang]}</h3>
+                  <Label htmlFor="sourceWord">
+                    {languageLabel[form.sourceLang]} słowo <span className="text-primary">*</span>
+                  </Label>
                   <Input
                     variant="large"
                     id="sourceWord"
@@ -221,22 +301,31 @@ export default function AddWordPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">{languageLabel[form.targetLang]}</h3>
+                  <Label htmlFor="targetWord">
+                    {languageLabel[form.targetLang]} tłumaczenia <span className="text-primary">*</span>
+                  </Label>
                   <Input
                     variant="large"
                     id="targetWord"
                     value={form.targetWord}
                     onChange={e => setForm(prev => ({ ...prev, targetWord: e.target.value }))}
-                    placeholder={form.targetLang === 'SILESIAN' ? 'np. kōmputr' : 'np. zmiana robocza'}
+                    placeholder={
+                      form.targetLang === 'SILESIAN'
+                        ? 'np. kōmputr, kompjuter'
+                        : 'np. zmiana robocza, służba'
+                    }
                     required
                     className={wordField}
                   />
+                  <p className="text-xs text-slate-600">
+                    Jeżeli istnieje więcej niż jedno tłumaczenie, wpisz je po przecinku (np. <em>zmiana robocza, służba</em>).
+                  </p>
                 </div>
               </div>
 
               <div className="grid gap-6 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="pronunciation">Wymowa (opcjonalnie)</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="pronunciation">Wymowa</Label>
                   <Input
                     id="pronunciation"
                     value={form.pronunciation}
@@ -319,13 +408,19 @@ export default function AddWordPage() {
                     </p>
                   )}
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Label htmlFor="partOfSpeech">Część mowy</Label>
-                  <Select value={form.partOfSpeech} onValueChange={value => setForm(prev => ({ ...prev, partOfSpeech: value }))}>
+                  <Select
+                    value={form.partOfSpeech || 'none'}
+                    onValueChange={value =>
+                      setForm(prev => ({ ...prev, partOfSpeech: value === 'none' ? '' : value }))
+                    }
+                  >
                     <SelectTrigger className={selectTriggerStyles}>
-                      <SelectValue placeholder="Wybierz" />
+                      <SelectValue placeholder="Brak" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Brak</SelectItem>
                       {partsOfSpeech.map(pos => (
                         <SelectItem key={pos} value={pos}>
                           {pos}
@@ -361,22 +456,28 @@ export default function AddWordPage() {
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label>Zdanie w języku {form.sourceLang === 'SILESIAN' ? 'śląskim' : 'polskim'} *</Label>
+                        <Label>
+                          Zdanie w języku {form.sourceLang === 'SILESIAN' ? 'śląskim' : 'polskim'}
+                          {index === 0 ? <span className="text-primary"> *</span> : null}
+                        </Label>
                         <Textarea
                           value={example.sourceText}
                           onChange={e => updateExampleSentence(example.id, 'sourceText', e.target.value)}
                           placeholder={form.sourceLang === 'SILESIAN' ? 'np. Idã na šichtã.' : 'np. Włącz komputer.'}
-                          required
+                          required={index === 0}
                           className={textareaField}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Tłumaczenie na język {form.targetLang === 'SILESIAN' ? 'śląski' : 'polski'} *</Label>
+                        <Label>
+                          Tłumaczenie na język {form.targetLang === 'SILESIAN' ? 'śląski' : 'polski'}
+                          {index === 0 ? <span className="text-primary"> *</span> : null}
+                        </Label>
                         <Textarea
                           value={example.translatedText}
                           onChange={e => updateExampleSentence(example.id, 'translatedText', e.target.value)}
                           placeholder={form.targetLang === 'SILESIAN' ? 'np. Włōńcz kōmputr.' : 'np. Idę na zmianę.'}
-                          required
+                          required={index === 0}
                           className={textareaField}
                         />
                       </div>
@@ -393,9 +494,9 @@ export default function AddWordPage() {
 
             <section className="space-y-6 p-6 md:p-8 bg-slate-300/75">
               <div className="space-y-2">
-                <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Informacje dodatkowe (opcjonalnie)</h2>
+                <h2 className="text-xl font-semibold uppercase tracking-[0.12em]">Informacje dodatkowe</h2>
                 <p className="text-sm text-slate-600">
-                  Jeśli chcesz, dodaj uwagi dotyczące zgłaszanego słowa.
+                  Dodaj dodatkowe informacje o słowie, jeśli chcesz przekazać je zespołowi redakcyjnemu.
                 </p>
               </div>
               <div className="space-y-2">
@@ -404,7 +505,7 @@ export default function AddWordPage() {
                   id="notes"
                   value={form.notes}
                   onChange={e => setForm(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Np. informacje o pochodzeniu słowa, częstości użycia itp."
+                  placeholder="Np. informacje o pochodzeniu słowa, miejscu występowania, kontekście użycia itp."
                   className={textareaField}
                   rows={4}
                 />

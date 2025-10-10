@@ -103,7 +103,7 @@ export function clearAdminSessionCookie(response: NextResponse) {
   })
 }
 
-export function isAdminSessionActive() {
-  const cookieStore = nextCookies()
+export async function isAdminSessionActive() {
+  const cookieStore = await nextCookies()
   return isAdminSessionValid(cookieStore.get(ADMIN_SESSION_COOKIE)?.value ?? null)
 }

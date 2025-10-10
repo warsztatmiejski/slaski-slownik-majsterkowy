@@ -39,7 +39,7 @@ export async function PATCH(
 
   try {
 	const { action, reviewNotes, adminId }: ReviewData = await request.json()
-	const submissionId = params.id
+	const { id: submissionId } = params
 
 	if (!action || !adminId) {
 	  return NextResponse.json(
@@ -51,9 +51,6 @@ export async function PATCH(
 	// Get the submission
 	const submission = await prisma.publicSubmission.findUnique({
 	  where: { id: submissionId },
-	  include: {
-		category: true
-	  }
 	})
 
 	if (!submission) {
@@ -83,6 +80,16 @@ export async function PATCH(
 		  }
 		})
 
+		const alternativeTranslations =
+		  submission.notes
+		    ?.split('\n')
+		    .map(line => line.trim())
+		    .find(line => line.startsWith('Alternatywne tłumaczenia: '))
+		    ?.replace('Alternatywne tłumaczenia: ', '')
+		    .split(',')
+		    .map(value => value.trim())
+		    .filter(Boolean) ?? []
+
 		const slug = await generateUniqueSlug(submission.sourceWord, tx)
 
 		// Create dictionary entry
@@ -103,7 +110,8 @@ export async function PATCH(
 			approvedBy: adminId,
 			exampleSentences: {
 			  create: exampleSentences
-			}
+			},
+			alternativeTranslations,
 		  }
 		})
 

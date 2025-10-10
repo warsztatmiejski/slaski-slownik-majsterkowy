@@ -32,7 +32,7 @@ function sanitizeSlug(slug: string | null | undefined, fallback: string): string
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  context: { params: Promise<{ id: string }> },
 ) {
   const unauthorized = ensureAdminRequest(request)
   if (unauthorized) {
@@ -40,7 +40,7 @@ export async function PATCH(
   }
 
   try {
-    const { id } = params
+    const { id } = await context.params
     const payload = (await request.json()) as UpdateEntryPayload
 
     if (!payload.sourceWord || !payload.targetWord || !payload.categoryId) {
@@ -203,6 +203,28 @@ export async function PATCH(
     })
   } catch (error) {
     console.error('Admin entry update error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  const unauthorized = ensureAdminRequest(request)
+  if (unauthorized) {
+    return unauthorized
+  }
+
+  try {
+    const { id } = await context.params
+
+    await prisma.exampleSentence.deleteMany({ where: { entryId: id } })
+    await prisma.dictionaryEntry.delete({ where: { id } })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Admin entry delete error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

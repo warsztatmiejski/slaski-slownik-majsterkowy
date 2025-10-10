@@ -241,10 +241,16 @@ export class DictionaryAPI {
   }
 
   static async updateEntry(entryId: string, data: UpdateEntryPayload): Promise<{ entry: AdminEntry }> {
-	return this.request(`/admin/entries/${entryId}`, {
-	  method: 'PATCH',
-	  body: JSON.stringify(data),
-	})
+    return this.request(`/admin/entries/${entryId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  static async deleteEntry(entryId: string): Promise<{ success: boolean }> {
+    return this.request(`/admin/entries/${entryId}`, {
+      method: 'DELETE',
+    })
   }
 
   static async getCategories(): Promise<CategorySummary[]> {
@@ -253,10 +259,20 @@ export class DictionaryAPI {
   }
 
   static async createCategory(data: { name: string; slug?: string }): Promise<{ category: CategorySummary }> {
-	return this.request('/admin/categories', {
-	  method: 'POST',
-	  body: JSON.stringify(data),
-	})
+    return this.request('/admin/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  static async updateCategory(
+    categoryId: string,
+    data: { name: string; description?: string | null },
+  ): Promise<{ category: CategorySummary }> {
+    return this.request(`/admin/categories/${categoryId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
   }
 
   static async deleteCategory(categoryId: string): Promise<{ success: boolean }> {

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { Language, SubmissionStatus } from '@prisma/client'
+import { Language, SubmissionStatus, CategoryType } from '@prisma/client'
 import { ensureAdminRequest } from '@/lib/auth'
+import { createSlug } from '@/lib/utils'
 
 interface SubmissionData {
   sourceWord: string
@@ -16,21 +17,64 @@ interface SubmissionData {
   submitterEmail?: string
   notes?: string
   newCategoryName?: string
+  alternativeTranslations?: string[]
 }
 
 export async function POST(request: NextRequest) {
   try {
 	const data: SubmissionData = await request.json()
 
+	const translations = (data.targetWord || '')
+	  .split(',')
+	  .map(value => value.trim())
+	  .filter(Boolean)
+
+	const primaryTargetWord = translations.shift() ?? data.targetWord?.trim() ?? ''
+	const alternativeTranslations = translations
+	const trimmedSourceWord = data.sourceWord?.trim() ?? ''
+	const newCategoryName = data.newCategoryName?.trim() ?? ''
+	let categoryId = data.categoryId?.trim() ?? ''
+
+	if (!categoryId && newCategoryName) {
+	  const slug = createSlug(newCategoryName)
+	  if (!slug) {
+		return NextResponse.json({ error: 'Nie udało się utworzyć nowej kategorii.' }, { status: 400 })
+	  }
+
+	  const existingCategory = await prisma.category.findFirst({
+		where: { slug },
+		select: { id: true },
+	  })
+
+	  if (existingCategory) {
+		categoryId = existingCategory.id
+	  } else {
+		const category = await prisma.category.create({
+		  data: {
+			name: newCategoryName,
+			slug,
+			type: CategoryType.TRADITIONAL,
+		  },
+		  select: { id: true },
+		})
+		categoryId = category.id
+	  }
+	}
+
 	// Validate required fields
-	if (!data.sourceWord || !data.targetWord || !data.categoryId) {
+	if (!trimmedSourceWord || !primaryTargetWord || !categoryId) {
 	  return NextResponse.json(
 		{ error: 'Missing required fields: sourceWord, targetWord, categoryId' },
 		{ status: 400 }
 	  )
 	}
 
-	if (!data.exampleSentences.length) {
+	const cleanedExamples = (data.exampleSentences || []).map(example => ({
+	  sourceText: example.sourceText.trim(),
+	  translatedText: example.translatedText.trim(),
+	}))
+
+	if (!cleanedExamples.length || !cleanedExamples[0].sourceText || !cleanedExamples[0].translatedText) {
 	  return NextResponse.json(
 		{ error: 'At least one example sentence is required' },
 		{ status: 400 }
@@ -39,7 +83,7 @@ export async function POST(request: NextRequest) {
 
 	// Verify category exists
 	const category = await prisma.category.findUnique({
-	  where: { id: data.categoryId }
+	  where: { id: categoryId }
 	})
 
 	if (!category) {
@@ -53,11 +97,11 @@ export async function POST(request: NextRequest) {
 	const existingSubmission = await prisma.publicSubmission.findFirst({
 	  where: {
 		sourceWord: {
-		  equals: data.sourceWord,
+		  equals: trimmedSourceWord,
 		  mode: 'insensitive'
 		},
 		targetWord: {
-		  equals: data.targetWord,
+		  equals: primaryTargetWord,
 		  mode: 'insensitive'
 		},
 		status: 'PENDING'
@@ -72,24 +116,25 @@ export async function POST(request: NextRequest) {
 	}
 
 	// Create submission
+	const noteLines = [
+	  data.notes?.trim() || null,
+	  newCategoryName ? `Propozycja nowej kategorii: ${newCategoryName}` : null,
+	  alternativeTranslations.length ? `Alternatywne tłumaczenia: ${alternativeTranslations.join(', ')}` : null,
+	].filter(Boolean)
+
 	const submission = await prisma.publicSubmission.create({
 	  data: {
-		sourceWord: data.sourceWord.trim(),
+		sourceWord: trimmedSourceWord,
 		sourceLang: data.sourceLang,
-		targetWord: data.targetWord.trim(),
+		targetWord: primaryTargetWord,
 		targetLang: data.targetLang,
 		pronunciation: data.pronunciation?.trim() || null,
 		partOfSpeech: data.partOfSpeech?.trim() || null,
-		categoryId: data.categoryId,
-		exampleSentences: data.exampleSentences.map(e => `${e.sourceText} | ${e.translatedText}`),
+		categoryId,
+		exampleSentences: cleanedExamples.map(e => `${e.sourceText} | ${e.translatedText}`),
 		submitterName: data.submitterName?.trim() || null,
 		submitterEmail: data.submitterEmail?.trim() || null,
-		notes: [
-		  data.notes?.trim(),
-		  data.newCategoryName?.trim() ? `Propozycja nowej kategorii: ${data.newCategoryName.trim()}` : null,
-		]
-		  .filter(Boolean)
-		  .join('\n') || null,
+		notes: noteLines.length ? noteLines.join('\n') : null,
 		status: 'PENDING'
 	  }
 	})

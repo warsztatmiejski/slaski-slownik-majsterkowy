@@ -15,6 +15,7 @@ import {
   Clock,
   Loader2,
   LogOut,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -119,6 +120,12 @@ export default function AdminDashboard() {
   const [newCategorySlug, setNewCategorySlug] = useState('')
   const [categoryError, setCategoryError] = useState<string | null>(null)
   const [isSavingCategory, setIsSavingCategory] = useState(false)
+  const [isCategoryEditDialogOpen, setIsCategoryEditDialogOpen] = useState(false)
+  const [categoryEditName, setCategoryEditName] = useState('')
+  const [categoryEditDescription, setCategoryEditDescription] = useState('')
+  const [categoryEditError, setCategoryEditError] = useState<string | null>(null)
+  const [categoryBeingEdited, setCategoryBeingEdited] = useState<CategorySummary | null>(null)
+  const [isSavingCategoryEdit, setIsSavingCategoryEdit] = useState(false)
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({})
   const [processingSubmissionId, setProcessingSubmissionId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -129,6 +136,9 @@ export default function AdminDashboard() {
   const [entryError, setEntryError] = useState<string | null>(null)
   const [isSavingEntry, setIsSavingEntry] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [entryPendingDelete, setEntryPendingDelete] = useState<AdminEntry | null>(null)
+  const [isDeletingEntry, setIsDeletingEntry] = useState(false)
   const router = useRouter()
 
   const handleLogout = useCallback(async () => {
@@ -231,6 +241,72 @@ export default function AdminDashboard() {
       setCategoryError('Nie udało się dodać kategorii. Spróbuj ponownie.')
     } finally {
       setIsSavingCategory(false)
+    }
+  }
+
+  const handleDeleteEntry = useCallback(async () => {
+    if (!entryPendingDelete) {
+      return
+    }
+
+    try {
+      setIsDeletingEntry(true)
+      await DictionaryAPI.deleteEntry(entryPendingDelete.id)
+      setEntries(prev => prev.filter(entry => entry.id !== entryPendingDelete.id))
+      setEntryPendingDelete(null)
+      setIsDeleteDialogOpen(false)
+      await refreshStats()
+    } catch (error) {
+      console.error('Delete entry failed:', error)
+      setGlobalError('Nie udało się usunąć wpisu. Spróbuj ponownie później.')
+    } finally {
+      setIsDeletingEntry(false)
+    }
+  }, [entryPendingDelete, refreshStats])
+
+  const openCategoryEditDialog = (category: CategorySummary) => {
+    setCategoryBeingEdited(category)
+    setCategoryEditName(category.name)
+    setCategoryEditDescription(category.description ?? '')
+    setCategoryEditError(null)
+    setIsCategoryEditDialogOpen(true)
+  }
+
+  const handleUpdateCategory = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!categoryBeingEdited) {
+      return
+    }
+
+    const name = categoryEditName.trim()
+    const description = categoryEditDescription.trim()
+
+    if (!name) {
+      setCategoryEditError('Podaj nazwę kategorii.')
+      return
+    }
+
+    try {
+      setIsSavingCategoryEdit(true)
+      setCategoryEditError(null)
+
+      const response = await DictionaryAPI.updateCategory(categoryBeingEdited.id, {
+        name,
+        description: description || null,
+      })
+
+      setCategories(prev =>
+        prev.map(category =>
+          category.id === response.category.id ? response.category : category,
+        ),
+      )
+      setIsCategoryEditDialogOpen(false)
+      setCategoryBeingEdited(null)
+    } catch (error) {
+      console.error('Update category failed:', error)
+      setCategoryEditError('Nie udało się zaktualizować kategorii. Spróbuj ponownie.')
+    } finally {
+      setIsSavingCategoryEdit(false)
     }
   }
 
@@ -754,6 +830,16 @@ export default function AdminDashboard() {
                             <Button variant="outline" size="sm" onClick={() => openEntryDialog(entry)}>
                               <Edit className="h-4 w-4" />
                             </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                setEntryPendingDelete(entry)
+                                setIsDeleteDialogOpen(true)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
@@ -793,6 +879,13 @@ export default function AdminDashboard() {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openCategoryEditDialog(category)}
+                          >
+                            Edytuj
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -996,6 +1089,58 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={isDeleteDialogOpen}
+        onOpenChange={open => {
+          setIsDeleteDialogOpen(open)
+          if (!open) {
+            setEntryPendingDelete(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Usuń wpis</DialogTitle>
+            <DialogDescription>
+              Tej operacji nie można cofnąć. Wpis zostanie usunięty ze słownika.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2 text-sm text-muted-foreground">
+            <p>
+              Czy na pewno chcesz usunąć wpis
+              {entryPendingDelete ? (
+                <span className="font-semibold text-foreground"> {entryPendingDelete.sourceWord}</span>
+              ) : null}
+              ?
+            </p>
+            <p>Wszystkie powiązane przykłady zostaną również usunięte.</p>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false)
+                setEntryPendingDelete(null)
+              }}
+              disabled={isDeletingEntry}
+            >
+              Anuluj
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteEntry} disabled={isDeletingEntry}>
+              {isDeletingEntry ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Usuwam…
+                </span>
+              ) : (
+                'Usuń wpis'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1034,6 +1179,74 @@ export default function AdminDashboard() {
               <Button type="submit" disabled={isSavingCategory}>
                 {isSavingCategory ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
                 Dodaj kategorię
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isCategoryEditDialogOpen}
+        onOpenChange={open => {
+          setIsCategoryEditDialogOpen(open)
+          if (!open) {
+            setCategoryBeingEdited(null)
+            setCategoryEditError(null)
+            setCategoryEditName('')
+            setCategoryEditDescription('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edytuj kategorię</DialogTitle>
+            <DialogDescription>Zaktualizuj nazwę i opis kategorii.</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleUpdateCategory}>
+            <div className="space-y-2">
+              <Label htmlFor="edit-category-name">Nazwa kategorii</Label>
+              <Input
+                id="edit-category-name"
+                value={categoryEditName}
+                onChange={event => setCategoryEditName(event.target.value)}
+                className={inputStyles}
+                placeholder="np. Górnictwo"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-category-description">Opis</Label>
+              <Textarea
+                id="edit-category-description"
+                value={categoryEditDescription}
+                onChange={event => setCategoryEditDescription(event.target.value)}
+                className={textareaStyles}
+                placeholder="Krótki opis kategorii"
+                rows={3}
+              />
+            </div>
+            {categoryEditError && <p className="text-sm text-red-600">{categoryEditError}</p>}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsCategoryEditDialogOpen(false)
+                  setCategoryBeingEdited(null)
+                }}
+                disabled={isSavingCategoryEdit}
+              >
+                Anuluj
+              </Button>
+              <Button type="submit" disabled={isSavingCategoryEdit}>
+                {isSavingCategoryEdit ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Zapisuję…
+                  </span>
+                ) : (
+                  'Zapisz zmiany'
+                )}
               </Button>
             </DialogFooter>
           </form>
