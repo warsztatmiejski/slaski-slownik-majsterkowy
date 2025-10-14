@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import ThemeScript from '@/components/theme-script'
+import { Analytics } from '@vercel/analytics/next';
 import { DEFAULT_SOCIAL_IMAGE, SITE_DESCRIPTION, SITE_NAME, resolveMetadataBase } from '@/lib/seo'
 
 export const metadata: Metadata = {
@@ -44,6 +45,7 @@ export default function RootLayout({
 	  </head>
 	  <body className="min-h-screen bg-background font-sans antialiased">
 		{children}
+    <Analytics />
 	  </body>
 	</html>
   )
