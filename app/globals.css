@@ -3,7 +3,7 @@
 @theme {
 	--font-system: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 	--font-sans: "Plotter Std", var(--font-system);
-	--font-heading: "Plotter Liner Stencil Std", "Plotter Std", var(--font-system);
+	--font-heading: "Plotter Liner Std", "Plotter Std", var(--font-system);
 	--font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
 	--color-background: oklch(0.99 0.005 285.82);
@@ -38,6 +38,7 @@
 		background-color: #f8f5f0;
 		color: #1b1b1b;
 		font-family: var(--font-sans);
+		font-weight: 400;
 		font-feature-settings: "rlig" 1, "calt" 1;
 	}
 
@@ -48,6 +49,7 @@
 	h5,
 	h6 {
 		font-family: var(--font-heading);
+		font-weight: 500;
 	}
 }
 

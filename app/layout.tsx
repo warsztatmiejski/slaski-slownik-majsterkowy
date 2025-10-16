@@ -44,7 +44,7 @@ export default function RootLayout({
 		<ThemeScript />
 		<link
 		  rel="stylesheet"
-		  href="https://webfonts.fontstand.com/WF-030374-6691b984fb11e114352ba7a74c90e792.css"
+		  href="https://webfonts.fontstand.com/WF-030374-294acbec7d95e2c4437d135fb639ba33.css"
 		  type="text/css"
 		/>
 	  </head>

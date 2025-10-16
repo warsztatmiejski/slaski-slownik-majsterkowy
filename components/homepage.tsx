@@ -1234,7 +1234,7 @@ return () => {
 			key={`${sentence.sourceText}-${index}`}
 			className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start md:gap-6"
 		>
-			<p className="text-2xl font-semibold italic leading-tight text-primary md:text-3xl">
+			<p className="text-2xl font-medium italic leading-tight text-primary md:text-3xl">
 				{sentence.sourceText}
 			</p>
 			<p className="text-base leading-relaxed text-slate-700 md:text-right md:text-lg">
@@ -1255,7 +1255,7 @@ return () => {
 				type="button"
 				onClick={() => handleCategoryClick(category.slug)}
 				className={cn(
-					"flex w-full cursor-pointer items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold uppercase transition-colors",
+					"flex w-full cursor-pointer items-center justify-between rounded-sm border border-slate-900 px-3 py-2 text-sm font-medium uppercase transition-colors",
 					isActive
 						? "bg-primary/10 border-primary text-primary"
 						: "text-slate-900 hover:bg-white/25 hover:text-primary hover:border-primary"
@@ -1285,10 +1285,10 @@ return () => {
 			>
 				<div className="flex items-end justify-between gap-2">
 					<div className="flex flex-col gap-1">
-						<p className="text-sm md:text-lg font-medium transition-colors">
+						<p className="text-sm font-medium md:text-lg transition-colors">
 							Czy wiesz co po śląsku znaczy
 						</p>
-						<p className="text-2xl md:text-4xl font-bold transition-colors">
+						<p className="font-heading text-2xl font-medium transition-colors md:text-4xl">
 							{randomEntry.sourceWord}?
 						</p>
 					</div>
@@ -1320,7 +1320,7 @@ return () => {
 				>
 					<ChevronLeft className="h-4 w-4" />
 				</button>
-				<span className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-900">
+				<span className="text-sm font-medium uppercase tracking-[0.12em] text-slate-900">
 					{activeCategoryData
 						? `${activeCategoryData.name}${
 								typeof activeCategoryData.entryCount === "number"
@@ -1369,7 +1369,7 @@ return () => {
 				<div className="flex h-8 w-8 items-center justify-center rounded-sm border border-slate-900 text-slate-900">
 					<List className="h-4 w-4" />
 				</div>
-				<span className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-900">
+				<span className="text-sm font-medium uppercase tracking-[0.12em] text-slate-900">
 					Indeks słów ({indexTotal})
 				</span>
 			</div>
@@ -1428,7 +1428,7 @@ return () => {
 								indexSelectedLetter === group.letter && ""
 							)}
 						>
-							<p className="text-xs font-bold uppercase text-slate-500">
+							<p className="text-xs font-medium uppercase text-slate-500">
 								{group.letter}
 							</p>
 							<div className="flex flex-col gap-1">
@@ -1475,7 +1475,7 @@ return () => {
 				<main className="md:w-2/3">
 					<div className="flex flex-col gap-10">
 						<section className="flex flex-wrap items-stretch md:mt-2 md:flex-row md:items-start md:justify-between">
-							<p className="text-lg font-bold md:max-w-xl md:text-2xl md:mt-1 text-slate-900">
+							<p className="text-lg font-medium text-slate-900 md:mt-1 md:max-w-xl md:text-2xl">
 								Techniczny słownik śląsko-polski rozwijany przez społeczność i
 								ekspertów branżowych.
 							</p>
@@ -1489,7 +1489,7 @@ return () => {
 										value={searchTerm}
 										onChange={(event) => handleInputChange(event.target.value)}
 										placeholder="Wyszukaj w słowniku..."
-										className={`${inputField} h-14 pl-11 text-xl font-semibold tracking-wide`}
+										className={`${inputField} h-14 pl-11 text-xl font-medium tracking-wide`}
 									/>
 									{isFetchingSuggestions && (
 										<Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-500" />
@@ -1519,7 +1519,7 @@ return () => {
 														className={cn(
 															"w-full cursor-pointer border-b border-slate-900 px-0 py-2 text-left text-sm transition-colors last:border-b-0",
 															isActive
-																? "font-semibold text-primary"
+																? "font-medium text-primary"
 																: "text-slate-900 hover:text-primary"
 														)}
 													>
@@ -1542,7 +1542,7 @@ return () => {
 								)}
 							</div>
 
-							<p className="text-sm font-semibold uppercase text-slate-900">
+							<p className="text-sm font-medium uppercase text-slate-900">
 								Wpisz słowo po polsku lub śląsku
 							</p>
 
@@ -1551,7 +1551,7 @@ return () => {
 									<button
 										type="button"
 										onClick={handleCategoryToggle}
-										className="flex w-full cursor-pointer flex-1 items-center justify-between gap-3 rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold uppercase text-slate-900 transition-colors hover:border-primary hover:bg-white/25 hover:text-primary"
+										className="flex w-full cursor-pointer flex-1 items-center justify-between gap-3 rounded-sm border border-slate-900 px-3 py-2 text-sm font-medium uppercase text-slate-900 transition-colors hover:border-primary hover:bg-white/25 hover:text-primary"
 										aria-expanded={isCategoryPanelOpen}
 										aria-controls="categories-panel"
 									>
@@ -1566,7 +1566,7 @@ return () => {
 									<button
 										type="button"
 										onClick={handleIndexToggle}
-										className="flex w-full cursor-pointer flex-1 items-center justify-between gap-3 rounded-sm border border-slate-900 px-3 py-2 text-sm font-semibold uppercase text-slate-900 transition-colors hover:border-primary hover:bg-white/25 hover:text-primary"
+										className="flex w-full cursor-pointer flex-1 items-center justify-between gap-3 rounded-sm border border-slate-900 px-3 py-2 text-sm font-medium uppercase text-slate-900 transition-colors hover:border-primary hover:bg-white/25 hover:text-primary"
 										aria-expanded={isIndexOpen}
 										aria-controls="word-index"
 									>
@@ -1593,7 +1593,7 @@ return () => {
 													<div className="flex h-8 w-8 items-center justify-center rounded-sm border border-slate-900 text-slate-900">
 														<Hammer className="h-4 w-4" />
 													</div>
-													<span className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-900">
+													<span className="text-sm font-medium uppercase tracking-[0.12em] text-slate-900">
 														Kategorie ({categories.length})
 													</span>
 												</div>
@@ -1654,7 +1654,7 @@ return () => {
 										>
 											<div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
 												<div className="space-y-2">
-													<h3 className="mb-4 text-5xl font-semibold leading-tight text-primary md:text-6xl">
+													<h3 className="font-heading mb-4 text-5xl font-medium leading-tight text-primary md:text-6xl">
 														{selectedEntry.sourceWord}
 													</h3>
 													{selectedEntry.pronunciation && (
@@ -1663,7 +1663,7 @@ return () => {
 														</p>
 													)}
 													{selectedEntry.partOfSpeech && (
-														<p className="text-xs font-bold uppercase text-slate-900">
+														<p className="text-xs font-medium uppercase text-slate-900">
 															{selectedEntry.partOfSpeech}
 														</p>
 													)}
@@ -1673,7 +1673,7 @@ return () => {
 														translations.map((translation) => (
 															<p
 																key={translation}
-																className="font-heading text-3xl font-semibold leading-tight text-slate-900 md:text-4xl"
+																className="font-heading text-3xl font-medium leading-tight text-slate-900 md:text-4xl"
 															>
 																{translation}
 															</p>
@@ -1703,7 +1703,7 @@ return () => {
 											<Separator className="h-px bg-slate-900/20" />
 
 											<div className="space-y-3">
-												<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+												<p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
 													Udostępnij hasło
 												</p>
 												<div className="flex flex-wrap items-center gap-2">
@@ -1754,7 +1754,7 @@ return () => {
 						<section className="p-0">
 							<div className="space-y-4 md:flex md:items-start md:justify-between md:space-y-0">
 								<div className="space-y-4 md:w-1/2 md:pr-6">
-									<h2 className="text-2xl font-bold">
+									<h2 className="font-heading text-2xl font-medium">
 										Pomóż nam rozwijać słownik!
 									</h2>
 									<p className="text-sm text-slate-900">
@@ -1796,7 +1796,7 @@ return () => {
 
 						<section className="space-y-5 text-slate-900">
 							<header className="space-y-3">
-								<h2 className="text-2xl font-bold">
+								<h2 className="font-heading text-2xl font-medium">
 									Na czym polega projekt „Śląski słownik majsterkowy”
 								</h2>
 								<p className="text-base leading-relaxed text-slate-900">
@@ -1808,7 +1808,7 @@ return () => {
 
 							<div className="space-y-6">
 								<div className="space-y-3">
-									<h3 className="text-md font-semibold uppercase">
+									<h3 className="font-heading text-md font-medium uppercase">
 										Co planujemy?
 									</h3>
 									<ul className="space-y-3 text-base leading-relaxed text-slate-900">
@@ -1841,7 +1841,7 @@ return () => {
 								</div>
 
 								<div className="space-y-3">
-									<h3 className="text-md font-semibold uppercase">
+									<h3 className="font-heading text-md font-medium uppercase">
 										Rezultat projektu
 									</h3>
 									<p className="text-base leading-relaxed text-slate-900">
