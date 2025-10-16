@@ -1673,7 +1673,7 @@ return () => {
 														translations.map((translation) => (
 															<p
 																key={translation}
-																className="text-3xl font-semibold leading-tight text-slate-900 md:text-4xl"
+																className="font-heading text-3xl font-semibold leading-tight text-slate-900 md:text-4xl"
 															>
 																{translation}
 															</p>

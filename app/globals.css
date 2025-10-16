@@ -1,7 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-	--font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--font-system: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--font-sans: "Plotter Std", var(--font-system);
+	--font-heading: "Plotter Liner Stencil Std", "Plotter Std", var(--font-system);
 	--font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
 	--color-background: oklch(0.99 0.005 285.82);
@@ -35,7 +37,17 @@
 	body {
 		background-color: #f8f5f0;
 		color: #1b1b1b;
+		font-family: var(--font-sans);
 		font-feature-settings: "rlig" 1, "calt" 1;
+	}
+
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		font-family: var(--font-heading);
 	}
 }
 
@@ -45,5 +57,11 @@
 		background-image: radial-gradient(var(--color-muted) 2px, transparent 0);
 		background-size: 30px 30px;
 		background-position: -5px -5px;
+	}
+}
+
+@layer utilities {
+	.font-heading {
+		font-family: var(--font-heading);
 	}
 }
