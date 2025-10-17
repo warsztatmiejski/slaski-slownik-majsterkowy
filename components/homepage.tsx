@@ -317,44 +317,51 @@ const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
 		[categoryEntries]
 	);
 
-	const translations = useMemo(() => {
-		if (!selectedEntry) return [];
-		const unique = new Set<string>();
-		const mainTranslation = selectedEntry.targetWord?.trim();
-		if (mainTranslation) {
-			unique.add(mainTranslation);
+	const { primaryTranslation, alternativeTranslations } = useMemo(() => {
+		if (!selectedEntry) {
+			return { primaryTranslation: null as string | null, alternativeTranslations: [] as string[] };
 		}
+
+		const primary = selectedEntry.targetWord?.trim() || null;
+		const alternativeSet = new Set<string>();
+
 		selectedEntry.alternativeTranslations.forEach((translation) => {
 			const normalized = translation.trim();
-			if (normalized) {
-				unique.add(normalized);
+			if (!normalized) {
+				return;
 			}
+			if (
+				primary &&
+				normalized.toLocaleLowerCase(LOCALE) === primary.toLocaleLowerCase(LOCALE)
+			) {
+				return;
+			}
+			alternativeSet.add(normalized);
 		});
-		return Array.from(unique);
+
+		const alternatives = Array.from(alternativeSet);
+		let resolvedPrimary = primary;
+
+		if (!resolvedPrimary && alternatives.length > 0) {
+			resolvedPrimary = alternatives[0] ?? null;
+			alternatives.shift();
+		}
+
+		return {
+			primaryTranslation: resolvedPrimary,
+			alternativeTranslations: alternatives,
+		};
 	}, [selectedEntry]);
 
-	const highlightTranslatedText = useCallback(
+	const highlightSourceWord = useCallback(
 		(text: string) => {
-			if (!translations.length) {
+			const sourceWord = selectedEntry?.sourceWord?.trim();
+			if (!sourceWord) {
 				return text;
 			}
 
-			const phrases = translations
-				.map((translation) => translation.trim())
-				.filter(Boolean)
-				.sort((a, b) => b.length - a.length);
-
-			if (!phrases.length) {
-				return text;
-			}
-
-			const pattern = phrases
-				.map((phrase) => {
-					const escaped = escapeRegExp(phrase);
-					return /\s/.test(phrase) ? escaped : `\\b${escaped}\\b`;
-				})
-				.join("|");
-			const regex = pattern ? new RegExp(`(${pattern})`, "giu") : null;
+			const escaped = escapeRegExp(sourceWord);
+			const regex = escaped ? new RegExp(`(${escaped})`, "giu") : null;
 
 			if (!regex) {
 				return text;
@@ -382,7 +389,7 @@ const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
 				return <Fragment key={`text-${index}`}>{part}</Fragment>;
 			});
 		},
-		[translations]
+		[selectedEntry?.sourceWord]
 	);
 
 	const shareUrl = useMemo(() => {
@@ -1292,10 +1299,10 @@ return () => {
 			className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start md:gap-6"
 		>
 			<p className="text-2xl font-medium leading-tight text-primary md:text-3xl">
-				{sentence.sourceText}
+				{highlightSourceWord(sentence.sourceText)}
 			</p>
 			<p className="text-base leading-relaxed text-slate-700 md:text-right md:text-lg">
-				{highlightTranslatedText(sentence.translatedText)}
+				{sentence.translatedText}
 			</p>
 		</div>
 	);
@@ -1725,22 +1732,36 @@ return () => {
 														</p>
 													)}
 												</div>
-												<div className="flex flex-col items-end gap-2 text-right">
-													{translations.length > 0 ? (
-														translations.map((translation) => (
-															<p
-																key={translation}
-																className="font-heading text-5xl font-medium leading-tight text-slate-900 md:text-6xl"
-															>
-																{translation}
+													<div className="flex flex-col items-end gap-2 text-right">
+														{primaryTranslation ? (
+															<>
+																<p className="font-heading text-5xl font-medium leading-tight text-slate-900 md:text-6xl">
+																	{primaryTranslation}
+																</p>
+																{alternativeTranslations.map((translation) => (
+																	<p
+																		key={translation}
+																		className="font-heading text-3xl font-medium leading-tight text-slate-900 md:text-4xl"
+																	>
+																		{translation}
+																	</p>
+																))}
+															</>
+														) : alternativeTranslations.length > 0 ? (
+															alternativeTranslations.map((translation) => (
+																<p
+																	key={translation}
+																	className="font-heading text-3xl font-medium leading-tight text-slate-900 md:text-4xl"
+																>
+																	{translation}
+																</p>
+															))
+														) : (
+															<p className="text-base text-slate-700">
+																Brak tłumaczeń.
 															</p>
-														))
-													) : (
-														<p className="text-base text-slate-700">
-															Brak tłumaczeń.
-														</p>
-													)}
-												</div>
+														)}
+													</div>
 											</div>
 
 											<Separator className="h-px bg-slate-900/20" />
