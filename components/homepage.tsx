@@ -2,6 +2,7 @@
 
 import {
     FormEvent,
+    Fragment,
     startTransition,
     useCallback,
     useEffect,
@@ -152,6 +153,10 @@ interface SearchResponse {
 const fieldFrame =
 	"border border-slate-900 bg-white/80 text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]";
 const inputField = `w-full rounded-sm text-base ${fieldFrame}`;
+
+function escapeRegExp(text: string): string {
+	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 function mapSearchResult(
 	result: SearchResponse["results"][number]
@@ -327,6 +332,58 @@ const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
 		});
 		return Array.from(unique);
 	}, [selectedEntry]);
+
+	const highlightTranslatedText = useCallback(
+		(text: string) => {
+			if (!translations.length) {
+				return text;
+			}
+
+			const phrases = translations
+				.map((translation) => translation.trim())
+				.filter(Boolean)
+				.sort((a, b) => b.length - a.length);
+
+			if (!phrases.length) {
+				return text;
+			}
+
+			const pattern = phrases
+				.map((phrase) => {
+					const escaped = escapeRegExp(phrase);
+					return /\s/.test(phrase) ? escaped : `\\b${escaped}\\b`;
+				})
+				.join("|");
+			const regex = pattern ? new RegExp(`(${pattern})`, "giu") : null;
+
+			if (!regex) {
+				return text;
+			}
+
+			const parts = text.split(regex);
+
+			if (parts.length === 1) {
+				return text;
+			}
+
+			return parts.map((part, index) => {
+				if (!part) {
+					return null;
+				}
+
+				if (index % 2 === 1) {
+					return (
+						<span key={`highlight-${index}`} className="font-medium text-slate-900">
+							{part}
+						</span>
+					);
+				}
+
+				return <Fragment key={`text-${index}`}>{part}</Fragment>;
+			});
+		},
+		[translations]
+	);
 
 	const shareUrl = useMemo(() => {
 		if (!selectedEntry || !origin) return "";
@@ -1234,11 +1291,11 @@ return () => {
 			key={`${sentence.sourceText}-${index}`}
 			className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start md:gap-6"
 		>
-			<p className="text-2xl font-medium italic leading-tight text-primary md:text-3xl">
+			<p className="text-2xl font-medium leading-tight text-primary md:text-3xl">
 				{sentence.sourceText}
 			</p>
 			<p className="text-base leading-relaxed text-slate-700 md:text-right md:text-lg">
-				{sentence.translatedText}
+				{highlightTranslatedText(sentence.translatedText)}
 			</p>
 		</div>
 	);
@@ -1673,7 +1730,7 @@ return () => {
 														translations.map((translation) => (
 															<p
 																key={translation}
-																className="font-heading text-3xl font-medium leading-tight text-slate-900 md:text-4xl"
+																className="font-heading text-5xl font-medium leading-tight text-slate-900 md:text-6xl"
 															>
 																{translation}
 															</p>
