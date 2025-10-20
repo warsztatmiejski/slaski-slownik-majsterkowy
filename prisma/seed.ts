@@ -138,6 +138,33 @@ async function main() {
   const categories = await prisma.category.findMany({ select: { id: true, slug: true } })
   const categoryMap = new Map(categories.map(category => [category.slug, category.id]))
 
+  const partOfSpeechSeeds = [
+    { label: 'rzeczownik', value: 'rzeczownik', order: 1 },
+    { label: 'czasownik', value: 'czasownik', order: 2 },
+    { label: 'przymiotnik', value: 'przymiotnik', order: 3 },
+    { label: 'przysłówek', value: 'przysłówek', order: 4 },
+    { label: 'liczebnik', value: 'liczebnik', order: 5 },
+    { label: 'zaimek', value: 'zaimek', order: 6 },
+    { label: 'spójnik', value: 'spójnik', order: 7 },
+    { label: 'przyimek', value: 'przyimek', order: 8 },
+    { label: 'partykuła', value: 'partykuła', order: 9 },
+    { label: 'imiesłów', value: 'imiesłów', order: 10 },
+    { label: 'wykrzyknik', value: 'wykrzyknik', order: 11 },
+  ]
+
+  await Promise.all(
+    partOfSpeechSeeds.map(option =>
+      prisma.partOfSpeech.upsert({
+        where: { value: option.value },
+        update: {
+          label: option.label,
+          order: option.order,
+        },
+        create: option,
+      }),
+    ),
+  )
+
   const dictionaryEntries: DictionarySeedEntry[] = [
     {
       id: 'entry-sichta',

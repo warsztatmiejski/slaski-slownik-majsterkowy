@@ -2,7 +2,6 @@
 
 import {
     FormEvent,
-    Fragment,
     startTransition,
     useCallback,
     useEffect,
@@ -98,6 +97,12 @@ function extractInitialLetter(text: string): string {
 	return first ? first.toLocaleUpperCase(LOCALE) : "#";
 }
 
+function computeLettersFromEntries(entries: EntryPreview[]): string[] {
+	return Array.from(
+		new Set(entries.map((entry) => extractInitialLetter(entry.sourceWord)))
+	).sort((a, b) => a.localeCompare(b, LOCALE, { sensitivity: "base" }));
+}
+
 export interface HomePageCategory {
 	id: string;
 	name: string;
@@ -124,65 +129,9 @@ export interface HomePageProps {
 	showAdminCredentials?: boolean;
 }
 
-interface SearchResponse {
-	results: Array<{
-		id: string;
-		slug: string;
-		sourceWord: string;
-		sourceLang: LanguageCode;
-		targetWord: string;
-		targetLang: LanguageCode;
-		pronunciation?: string | null;
-		partOfSpeech?: string | null;
-		notes?: string | null;
-		alternativeTranslations: string[];
-		category: {
-			id: string;
-			name: string;
-			slug: string;
-		};
-		exampleSentences: {
-			sourceText: string;
-			translatedText: string;
-		}[];
-	}>;
-	total: number;
-	query: string;
-}
-
 const fieldFrame =
 	"border border-slate-900 bg-white/80 text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]";
 const inputField = `w-full rounded-sm text-base ${fieldFrame}`;
-
-function escapeRegExp(text: string): string {
-	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function mapSearchResult(
-	result: SearchResponse["results"][number]
-): EntryPreview {
-	return {
-		id: result.id,
-		slug: result.slug,
-		sourceWord: result.sourceWord,
-		sourceLang: result.sourceLang,
-		targetWord: result.targetWord,
-		targetLang: result.targetLang,
-		pronunciation: result.pronunciation ?? undefined,
-		partOfSpeech: result.partOfSpeech ?? undefined,
-		notes: result.notes ?? undefined,
-		alternativeTranslations: result.alternativeTranslations ?? [],
-		category: {
-			id: result.category.id,
-			name: result.category.name,
-			slug: result.category.slug,
-		},
-		exampleSentences: result.exampleSentences.map((sentence) => ({
-			sourceText: sentence.sourceText,
-			translatedText: sentence.translatedText,
-		})),
-	};
-}
 
 export default function HomePage({
     featuredEntry,
@@ -216,6 +165,9 @@ export default function HomePage({
 	const [categoryEntries, setCategoryEntries] = useState<EntryPreview[]>([]);
 	const [categoryError, setCategoryError] = useState<string | null>(null);
 	const [isFetchingCategory, setIsFetchingCategory] = useState(false);
+	const [categoryList, setCategoryList] = useState(categories);
+	const [isRefreshingCategories, setIsRefreshingCategories] = useState(false);
+	const [categoryRefreshError, setCategoryRefreshError] = useState<string | null>(null);
 	const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);
 	const [isCategoryView, setIsCategoryView] = useState(false);
 	const [isCategoryPanelOpen, setIsCategoryPanelOpen] = useState(false);
@@ -229,7 +181,6 @@ export default function HomePage({
 	const [indexSelectedLetter, setIndexSelectedLetter] = useState<string | null>(
 		null
 	);
-	const [hasFetchedIndex, setHasFetchedIndex] = useState(false);
 	const [origin, setOrigin] = useState("");
 const [shareCopied, setShareCopied] = useState(false);
 const lastCategorySlugRef = useRef<string | null>(null);
@@ -240,6 +191,8 @@ const pendingIndexLetterRef = useRef<string | null>(null);
 const pendingCategoryOpenRef = useRef(false);
 const translationSectionRef = useRef<HTMLDivElement | null>(null);
 const suppressSuggestionsRef = useRef(false);
+const dictionaryDataRef = useRef<EntryPreview[]>([]);
+const dictionaryLettersRef = useRef<string[]>([]);
 const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 const [isCheckingAdminSession, setIsCheckingAdminSession] = useState(true);
 const [adminEmailInput, setAdminEmailInput] = useState("");
@@ -275,8 +228,11 @@ const checkAdminSession = useCallback(async () => {
 const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
     featuredEntry ?? recentEntries[0] ?? null
 );
+useEffect(() => {
+	setCategoryList(categories);
+}, [categories]);
 
-	useEffect(() => {
+useEffect(() => {
 		const pool = [featuredEntry, ...recentEntries].filter(
 			(entry): entry is EntryPreview => Boolean(entry)
 		);
@@ -301,8 +257,8 @@ const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
 
 	const activeCategoryData = useMemo(
 		() =>
-			categories.find((category) => category.slug === activeCategory) || null,
-		[categories, activeCategory]
+			categoryList.find((category) => category.slug === activeCategory) || null,
+		[categoryList, activeCategory]
 	);
 
 	const sortedCategoryEntries = useMemo(
@@ -353,43 +309,20 @@ const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
 		};
 	}, [selectedEntry]);
 
-	const highlightSourceWord = useCallback(
-		(text: string) => {
-			const sourceWord = selectedEntry?.sourceWord?.trim();
-			if (!sourceWord) {
-				return text;
-			}
+	const sourceVariants = useMemo(() => {
+		if (!selectedEntry?.sourceWord) {
+			return [] as string[];
+		}
 
-			const escaped = escapeRegExp(sourceWord);
-			const regex = escaped ? new RegExp(`(${escaped})`, "giu") : null;
+		return selectedEntry.sourceWord
+			.split(",")
+			.map((variant) => variant.trim())
+			.filter(Boolean);
+	}, [selectedEntry]);
 
-			if (!regex) {
-				return text;
-			}
-
-			const parts = text.split(regex);
-
-			if (parts.length === 1) {
-				return text;
-			}
-
-			return parts.map((part, index) => {
-				if (!part) {
-					return null;
-				}
-
-				if (index % 2 === 1) {
-					return (
-						<span key={`highlight-${index}`} className="font-medium text-slate-900">
-							{part}
-						</span>
-					);
-				}
-
-				return <Fragment key={`text-${index}`}>{part}</Fragment>;
-			});
-		},
-		[selectedEntry?.sourceWord]
+	const primarySourceWord = useMemo(
+		() => sourceVariants[0] ?? selectedEntry?.sourceWord ?? null,
+		[sourceVariants, selectedEntry]
 	);
 
 	const shareUrl = useMemo(() => {
@@ -463,9 +396,77 @@ const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
 			);
 	}, [indexEntries]);
 
-	const indexLetters = useMemo(
-		() => indexGroups.map((group) => group.letter),
-		[indexGroups]
+const indexLetters = useMemo(
+	() => indexGroups.map((group) => group.letter),
+	[indexGroups]
+);
+
+	const refreshDictionaryData = useCallback(
+		async ({
+			signal,
+			force = false,
+		}: {
+			signal?: AbortSignal;
+			force?: boolean;
+		} = {}) => {
+			if (!force && dictionaryDataRef.current.length) {
+				const cachedEntries = dictionaryDataRef.current;
+				const cachedLetters =
+					dictionaryLettersRef.current.length > 0
+						? dictionaryLettersRef.current
+						: computeLettersFromEntries(cachedEntries);
+
+				return {
+					entries: cachedEntries,
+					letters: cachedLetters,
+					total: cachedEntries.length,
+				};
+			}
+
+			const response = await fetch("/api/dictionary/index", {
+				signal,
+			});
+
+			if (!response.ok) {
+				throw new Error("Index request failed");
+			}
+
+			const data = (await response.json()) as WordIndexResponse;
+
+			if (signal?.aborted) {
+				return null;
+			}
+
+			const computedLetters =
+				data.letters && data.letters.length > 0
+					? data.letters
+					: computeLettersFromEntries(data.entries);
+
+			dictionaryDataRef.current = data.entries;
+			dictionaryLettersRef.current = computedLetters;
+			setIndexEntries(data.entries);
+			setIndexTotal(data.total);
+			return {
+				entries: data.entries,
+				letters: computedLetters,
+				total: data.total,
+			};
+		},
+		[]
+	);
+
+	const ensureDictionaryEntries = useCallback(
+		async ({
+			signal,
+			force = false,
+		}: {
+			signal?: AbortSignal;
+			force?: boolean;
+		} = {}) => {
+			const data = await refreshDictionaryData({ signal, force });
+			return data?.entries ?? [];
+		},
+		[refreshDictionaryData]
 	);
 
 const replaceUrlWithParams = useCallback(
@@ -503,6 +504,20 @@ const createSanitizedParams = useCallback(() => {
 useEffect(() => {
     setIsIndexOpen(pathSegments[0] === "indeks");
 }, [pathSegments]);
+
+useEffect(() => {
+	const controller = new AbortController();
+
+	refreshDictionaryData({ signal: controller.signal }).catch((error) => {
+		if ((error as Error).name !== "AbortError") {
+			console.error("Dictionary preload failed:", error);
+		}
+	});
+
+	return () => {
+		controller.abort();
+	};
+}, [refreshDictionaryData]);
 
 useEffect(() => {
     void checkAdminSession();
@@ -621,112 +636,158 @@ useEffect(() => {
 		};
 	}, []);
 
-	useEffect(() => {
-		if (!activeCategory) {
-			setCategoryEntries([]);
-			setCategoryError(null);
-			setIsFetchingCategory(false);
-		}
-	}, [activeCategory]);
+useEffect(() => {
+	if (!activeCategory) {
+		setCategoryEntries([]);
+		setCategoryError(null);
+		setIsFetchingCategory(false);
+	}
+}, [activeCategory]);
 
-	useEffect(() => {
-		if (!isIndexOpen || hasFetchedIndex) {
-			return;
-		}
+useEffect(() => {
+	if (!isCategoryPanelOpen) {
+		return;
+	}
 
-		const controller = new AbortController();
-		const fetchIndex = async () => {
-			try {
-				setIsFetchingIndex(true);
-				setIndexError(null);
-				const response = await fetch("/api/dictionary/index", {
-					signal: controller.signal,
-				});
+	const controller = new AbortController();
 
-				if (!response.ok) {
-					throw new Error("Index request failed");
-				}
+	const refreshCategories = async () => {
+		try {
+			setIsRefreshingCategories(true);
+			setCategoryRefreshError(null);
 
-				const data = (await response.json()) as WordIndexResponse;
-				if (controller.signal.aborted) {
-					return;
-				}
+			await refreshDictionaryData({ signal: controller.signal, force: true });
 
-				setIndexEntries(data.entries);
-				setIndexTotal(data.total);
-				setHasFetchedIndex(true);
+			const response = await fetch("/api/categories", {
+				signal: controller.signal,
+			});
 
-				if (data.letters?.length) {
-					const availableLetters = data.letters.map((letter) =>
-						letter.toLocaleUpperCase(LOCALE)
-					);
-					const segments = pathname.split("/").filter(Boolean);
-					const routeLetterSegment = segments[1];
-					const routeLetter = routeLetterSegment
-						? decodeURIComponent(routeLetterSegment).toLocaleUpperCase(LOCALE)
-						: null;
-
-					let nextLetter =
-						indexSelectedLetter &&
-						availableLetters.includes(indexSelectedLetter)
-							? indexSelectedLetter
-							: null;
-
-					if (
-						pendingIndexLetterRef.current &&
-						availableLetters.includes(pendingIndexLetterRef.current)
-					) {
-						nextLetter = pendingIndexLetterRef.current;
-						pendingIndexLetterRef.current = null;
-					} else if (routeLetter && availableLetters.includes(routeLetter)) {
-						nextLetter = routeLetter;
-					} else if (!nextLetter) {
-						nextLetter = availableLetters[0];
-					}
-
-					if (nextLetter && nextLetter !== indexSelectedLetter) {
-						setIndexSelectedLetter(nextLetter);
-					}
-
-					if (nextLetter && (!routeLetter || routeLetter !== nextLetter)) {
-						const params = createSanitizedParams();
-						replaceUrlWithParams(
-							`/indeks/${encodeURIComponent(nextLetter.toLowerCase())}`,
-							params
-						);
-					}
-				}
-			} catch (error) {
-				if ((error as Error).name === "AbortError") {
-					return;
-				}
-				console.error("Word index fetch failed:", error);
-				if (!controller.signal.aborted) {
-					setIndexError("Nie udało się pobrać indeksu haseł.");
-					setIndexEntries([]);
-				}
-			} finally {
-				if (!controller.signal.aborted) {
-					setIsFetchingIndex(false);
-				}
+			if (!response.ok) {
+				throw new Error("Failed to load categories");
 			}
-		};
 
-		fetchIndex();
+			const data = (await response.json()) as {
+				categories?: HomePageCategory[];
+			};
 
-		return () => {
-			controller.abort();
-		};
-	}, [
-		createSanitizedParams,
-		hasFetchedIndex,
-		indexLetters,
-		indexSelectedLetter,
-		isIndexOpen,
-		pathname,
-		replaceUrlWithParams,
-		searchParams,
-	]);
+			if (controller.signal.aborted) {
+				return;
+			}
+
+			if (data.categories) {
+				setCategoryList(data.categories);
+			}
+		} catch (error) {
+			if ((error as Error).name === "AbortError") {
+				return;
+			}
+			console.error("Category refresh failed:", error);
+			if (!controller.signal.aborted) {
+				setCategoryRefreshError("Nie udało się odświeżyć kategorii.");
+			}
+		} finally {
+			if (!controller.signal.aborted) {
+				setIsRefreshingCategories(false);
+			}
+		}
+	};
+
+	void refreshCategories();
+
+	return () => {
+		controller.abort();
+	};
+}, [isCategoryPanelOpen, refreshDictionaryData]);
+
+useEffect(() => {
+	if (!isIndexOpen) {
+		return;
+	}
+
+	const controller = new AbortController();
+	const fetchIndex = async () => {
+		try {
+			setIsFetchingIndex(true);
+			setIndexError(null);
+
+			const data = await refreshDictionaryData({
+				signal: controller.signal,
+				force: true,
+			});
+
+			if (!data || controller.signal.aborted) {
+				return;
+			}
+
+			const availableLetters = data.letters.length
+				? data.letters.map((letter) => letter.toLocaleUpperCase(LOCALE))
+				: computeLettersFromEntries(data.entries);
+			const segments = pathname.split("/").filter(Boolean);
+			const routeLetterSegment = segments[1];
+			const routeLetter = routeLetterSegment
+				? decodeURIComponent(routeLetterSegment).toLocaleUpperCase(LOCALE)
+				: null;
+
+			let nextLetter =
+				indexSelectedLetter && availableLetters.includes(indexSelectedLetter)
+					? indexSelectedLetter
+					: null;
+
+			if (
+				pendingIndexLetterRef.current &&
+				availableLetters.includes(pendingIndexLetterRef.current)
+			) {
+				nextLetter = pendingIndexLetterRef.current;
+				pendingIndexLetterRef.current = null;
+			} else if (routeLetter && availableLetters.includes(routeLetter)) {
+				nextLetter = routeLetter;
+			} else if (!nextLetter) {
+				nextLetter = availableLetters[0];
+			}
+
+			if (nextLetter && nextLetter !== indexSelectedLetter) {
+				setIndexSelectedLetter(nextLetter);
+			}
+
+			if (nextLetter && (!routeLetter || routeLetter !== nextLetter)) {
+				const params = createSanitizedParams();
+				replaceUrlWithParams(
+					`/indeks/${encodeURIComponent(nextLetter.toLowerCase())}`,
+					params
+				);
+			}
+		} catch (error) {
+			if ((error as Error).name === "AbortError") {
+				return;
+			}
+			console.error("Word index fetch failed:", error);
+			if (!controller.signal.aborted) {
+				setIndexError("Nie udało się pobrać indeksu haseł.");
+				setIndexEntries([]);
+				dictionaryDataRef.current = [];
+				dictionaryLettersRef.current = [];
+			}
+		} finally {
+			if (!controller.signal.aborted) {
+				setIsFetchingIndex(false);
+			}
+		}
+	};
+
+	void fetchIndex();
+
+	return () => {
+		controller.abort();
+	};
+}, [
+	createSanitizedParams,
+	indexSelectedLetter,
+	isIndexOpen,
+	pathname,
+	refreshDictionaryData,
+	replaceUrlWithParams,
+	searchParams,
+]);
 
 	const updateUrlWithEntry = (entrySlug: string | null) => {
 		const params = createSanitizedParams();
@@ -846,7 +907,8 @@ useEffect(() => {
 		setSelectedEntry(entry);
 		setSuggestions([]);
 		setSearchError(null);
-		setSearchTerm(entry.sourceWord);
+		const [primarySourceFromEntry] = entry.sourceWord.split(",");
+		setSearchTerm(primarySourceFromEntry?.trim() || entry.sourceWord);
 		if (isCategoryPanelOpen) {
 			clearCategoryState({ updateUrl: false });
 			setIsCategoryPanelOpen(false);
@@ -941,16 +1003,6 @@ const handleAdminLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
 			signal?: AbortSignal;
 			mode?: "search" | "category";
 		}) => {
-			if (!query && !category) {
-				return;
-			}
-
-			const params = new URLSearchParams();
-
-			if (query) params.set("q", query);
-			if (category) params.set("category", category);
-			params.set("limit", mode === "category" ? "24" : "8");
-
 			try {
 				if (mode === "search") {
 					setIsFetchingSuggestions(true);
@@ -958,27 +1010,119 @@ const handleAdminLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
 					setIsFetchingCategory(true);
 				}
 
-				const response = await fetch(`/api/search?${params.toString()}`, {
+				const limit = mode === "category" ? 24 : 8;
+				const entries = await ensureDictionaryEntries({
 					signal,
+					force: mode === "category",
 				});
 
-				if (!response.ok) {
-					const data = await response
-						.json()
-						.catch(() => ({ error: "Błąd wyszukiwania" }));
-					throw new Error(data.error || "Błąd wyszukiwania");
+				if (signal?.aborted) {
+					return;
 				}
 
-				const data = (await response.json()) as SearchResponse;
-				const mappedResults = data.results.map(mapSearchResult);
+				const normalizedCategory = category?.trim().toLowerCase() ?? null;
+				let filtered = normalizedCategory
+					? entries.filter(
+							(entry) =>
+								entry.category.slug.toLowerCase() === normalizedCategory ||
+								entry.category.id === normalizedCategory
+					  )
+					: entries.slice();
 
 				if (mode === "search") {
-					setSuggestions(mappedResults);
-					setSearchError(mappedResults.length === 0 ? "Brak wyników" : null);
+					const normalizedQuery = query?.trim().toLowerCase() ?? "";
+
+					if (!normalizedQuery) {
+						filtered = [];
+					} else {
+						const scored = filtered
+							.map((entry) => {
+								const sourceLower = entry.sourceWord.toLowerCase();
+								const sourceVariantsLower = entry.sourceWord
+									.split(",")
+									.map((variant) => variant.trim().toLowerCase())
+									.filter(Boolean);
+								const targetLower = entry.targetWord.toLowerCase();
+								const altLower = entry.alternativeTranslations.map((item) =>
+									item.toLowerCase()
+								);
+								const slugLower = entry.slug.toLowerCase();
+
+								const exactMatch =
+									sourceVariantsLower.includes(normalizedQuery) ||
+									targetLower === normalizedQuery ||
+									altLower.includes(normalizedQuery);
+
+								if (exactMatch) {
+									return { entry, score: 0 };
+								}
+
+								const startsWithMatch =
+									sourceVariantsLower.some((variant) =>
+										variant.startsWith(normalizedQuery)
+									) || targetLower.startsWith(normalizedQuery);
+
+								if (startsWithMatch) {
+									return { entry, score: 1 };
+								}
+
+								const altStartsWith = altLower.some((variant) =>
+									variant.startsWith(normalizedQuery)
+								);
+								if (altStartsWith) {
+									return { entry, score: 1.5 };
+								}
+
+								const includesMatch =
+									sourceLower.includes(normalizedQuery) ||
+									targetLower.includes(normalizedQuery) ||
+									altLower.some((variant) => variant.includes(normalizedQuery)) ||
+									slugLower.includes(normalizedQuery);
+
+								if (includesMatch) {
+									return { entry, score: 2 };
+								}
+
+								return null;
+							})
+							.filter(
+								(
+									item
+								): item is {
+									entry: EntryPreview;
+									score: number;
+								} => item !== null
+							)
+							.sort((a, b) => {
+								if (a.score === b.score) {
+									return a.entry.sourceWord.localeCompare(
+										b.entry.sourceWord,
+										LOCALE,
+										{ sensitivity: "base" }
+									);
+								}
+								return a.score - b.score;
+							});
+
+						filtered = scored.map((item) => item.entry);
+					}
 				} else {
-					setCategoryEntries(mappedResults);
+					filtered = filtered.sort((a, b) =>
+						a.sourceWord.localeCompare(b.sourceWord, LOCALE, {
+							sensitivity: "base",
+						})
+					);
+				}
+
+				const limitedResults = filtered.slice(0, limit);
+
+				if (mode === "search") {
+					setSuggestions(limitedResults);
+					setSearchError(limitedResults.length === 0 ? "Brak wyników" : null);
+				} else {
+					setCategoryEntries(limitedResults);
 					setCategoryError(
-						mappedResults.length === 0 ? "Brak haseł w tej kategorii" : null
+						limitedResults.length === 0 ? "Brak haseł w tej kategorii" : null
 					);
 				}
 			} catch (error) {
@@ -1005,7 +1149,7 @@ const handleAdminLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
 				}
 			}
 		},
-		[]
+		[ensureDictionaryEntries]
 	);
 
 	const handleCategoryClick = (slug: string) => {
@@ -1060,7 +1204,8 @@ const handleAdminLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
 
 				const data = (await response.json()) as { entry: EntryPreview };
 				setSelectedEntry(data.entry);
-				setSearchTerm(data.entry.sourceWord);
+				const [primaryFetchedSource] = data.entry.sourceWord.split(",");
+				setSearchTerm(primaryFetchedSource?.trim() || data.entry.sourceWord);
 				setSuggestions([]);
 				setIsCategoryPanelOpen(false);
 				setIsIndexOpen(false);
@@ -1299,15 +1444,15 @@ return () => {
 			className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start md:gap-6"
 		>
 			<p className="text-2xl font-medium leading-tight text-primary md:text-3xl">
-				{highlightSourceWord(sentence.sourceText)}
+				{sentence.sourceText}
 			</p>
-			<p className="text-base leading-relaxed text-slate-700 md:text-right md:text-lg">
+			<p className="text-2xl font-medium leading-tight text-slate-900 md:text-3xl">
 				{sentence.translatedText}
 			</p>
 		</div>
 	);
 
-	const categoryButtons = categories.map((category) => {
+	const categoryButtons = categoryList.map((category) => {
 		const isActive = activeCategory === category.slug;
 		const countLabel =
 			typeof category.entryCount === "number"
@@ -1353,7 +1498,11 @@ return () => {
 							Czy wiesz co po śląsku znaczy
 						</p>
 						<p className="font-heading text-2xl font-medium transition-colors md:text-4xl">
-							{randomEntry.sourceWord}?
+							{(() => {
+								const [primaryVariant] = randomEntry.sourceWord.split(",");
+								const trimmed = primaryVariant?.trim() || randomEntry.sourceWord;
+								return trimmed.endsWith("?") ? trimmed : `${trimmed}?`;
+							})()}
 						</p>
 					</div>
 					<div className="flex items-center justify-center transition-colors">
@@ -1658,9 +1807,19 @@ return () => {
 														<Hammer className="h-4 w-4" />
 													</div>
 													<span className="text-sm font-medium uppercase tracking-[0.12em] text-slate-900">
-														Kategorie ({categories.length})
+														Kategorie ({categoryList.length})
 													</span>
 												</div>
+												{isRefreshingCategories && (
+													<p className="text-xs text-slate-500">
+														Aktualizuję liczbę haseł w kategoriach…
+													</p>
+												)}
+												{categoryRefreshError && (
+													<p className="text-xs text-red-600">
+														{categoryRefreshError}
+													</p>
+												)}
 												<div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
 													{categoryButtons}
 												</div>
@@ -1716,13 +1875,13 @@ return () => {
 											id="translation-section"
 											className="space-y-6 mt-6"
 										>
-											<div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)] md:items-start">
+											<div className="space-y-6">
 												<div className="space-y-2">
-													<h3 className="font-heading mb-4 text-5xl font-medium leading-tight text-primary md:text-6xl">
-														{selectedEntry.sourceWord}
+													<h3 className="font-heading text-5xl font-medium leading-tight text-primary md:text-6xl">
+														{primarySourceWord ?? selectedEntry.sourceWord}
 													</h3>
 													{selectedEntry.pronunciation && (
-														<p className="text-lg font-mono text-slate-600">
+														<p className="font-ipa text-lg text-slate-600">
 															[{selectedEntry.pronunciation}]
 														</p>
 													)}
@@ -1732,36 +1891,26 @@ return () => {
 														</p>
 													)}
 												</div>
-													<div className="flex flex-col items-end gap-2 text-right">
-														{primaryTranslation ? (
-															<>
-																<p className="font-heading text-5xl font-medium leading-tight text-slate-900 md:text-6xl">
-																	{primaryTranslation}
-																</p>
-																{alternativeTranslations.map((translation) => (
-																	<p
-																		key={translation}
-																		className="font-heading text-3xl font-medium leading-tight text-slate-900 md:text-4xl"
-																	>
-																		{translation}
-																	</p>
-																))}
-															</>
-														) : alternativeTranslations.length > 0 ? (
-															alternativeTranslations.map((translation) => (
-																<p
-																	key={translation}
-																	className="font-heading text-3xl font-medium leading-tight text-slate-900 md:text-4xl"
-																>
-																	{translation}
-																</p>
-															))
-														) : (
-															<p className="text-base text-slate-700">
-																Brak tłumaczeń.
-															</p>
-														)}
-													</div>
+												<div className="space-y-2">
+													{primaryTranslation && (
+														<p className="font-heading text-4xl font-medium leading-tight text-slate-900 md:text-5xl">
+															{primaryTranslation}
+														</p>
+													)}
+													{alternativeTranslations.map((translation) => (
+														<p
+															key={translation}
+															className="font-heading text-3xl font-medium leading-tight text-slate-900 md:text-4xl"
+														>
+															{translation}
+														</p>
+													))}
+													{!primaryTranslation && alternativeTranslations.length === 0 && (
+														<p className="text-base text-slate-700">
+															Brak tłumaczeń.
+														</p>
+													)}
+												</div>
 											</div>
 
 											<Separator className="h-px bg-slate-900/20" />

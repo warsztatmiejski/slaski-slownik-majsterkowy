@@ -77,6 +77,14 @@ export interface CategorySummary {
   slug: string
   description?: string
   type?: string
+  entryCount?: number
+}
+
+export interface PartOfSpeechOption {
+  id: string
+  label: string
+  value: string
+  order: number
 }
 
 export interface AdminStats {
@@ -277,6 +285,55 @@ export class DictionaryAPI {
 
   static async deleteCategory(categoryId: string): Promise<{ success: boolean }> {
 	return this.request(`/admin/categories?id=${encodeURIComponent(categoryId)}`, {
+	  method: 'DELETE',
+	})
+  }
+
+  static async getPartsOfSpeechOptions(): Promise<PartOfSpeechOption[]> {
+	const response = await this.request<{ parts: PartOfSpeechOption[] }>(
+	  '/parts-of-speech',
+	)
+	return response.parts
+  }
+
+  static async getAdminPartsOfSpeechOptions(): Promise<PartOfSpeechOption[]> {
+	const response = await this.request<{ parts: PartOfSpeechOption[] }>(
+	  '/admin/parts-of-speech',
+	)
+	return response.parts
+  }
+
+  static async createPartOfSpeechOption(data: {
+	label: string
+	value?: string
+	order?: number
+  }): Promise<PartOfSpeechOption> {
+	const response = await this.request<{ part: PartOfSpeechOption }>(
+	  '/admin/parts-of-speech',
+	  {
+		method: 'POST',
+		body: JSON.stringify(data),
+	  },
+	)
+	return response.part
+  }
+
+  static async updatePartOfSpeechOption(
+	id: string,
+	data: { label?: string; value?: string; order?: number },
+  ): Promise<PartOfSpeechOption> {
+	const response = await this.request<{ part: PartOfSpeechOption }>(
+	  `/admin/parts-of-speech/${id}`,
+	  {
+		method: 'PATCH',
+		body: JSON.stringify(data),
+	  },
+	)
+	return response.part
+  }
+
+  static async deletePartOfSpeechOption(id: string): Promise<{ success: boolean }> {
+	return this.request(`/admin/parts-of-speech/${id}`, {
 	  method: 'DELETE',
 	})
   }

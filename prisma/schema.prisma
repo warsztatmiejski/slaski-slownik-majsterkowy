@@ -103,6 +103,17 @@ model PublicSubmission {
   @@map("public_submissions")
 }
 
+model PartOfSpeech {
+  id        String   @id @default(cuid())
+  label     String
+  value     String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("parts_of_speech")
+}
+
 model User {
   id       String   @id @default(cuid())
   email    String   @unique

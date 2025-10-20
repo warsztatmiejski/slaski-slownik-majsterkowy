@@ -38,6 +38,7 @@ import {
   AdminEntry,
   AdminStats,
   CategorySummary,
+  PartOfSpeechOption,
   DictionaryAPI,
   PendingSubmission,
   UpdateEntryPayload,
@@ -70,8 +71,12 @@ interface EntryFormState {
   exampleSentences: ExampleFormState[]
 }
 
-const inputStyles = 'border border-slate-300 bg-white text-slate-900'
-const textareaStyles = 'border border-slate-300 bg-white text-slate-900'
+const inputStyles =
+  'border border-slate-400 bg-white text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-60'
+const textareaStyles =
+  'border border-slate-400 bg-white text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-60'
+const selectStyles =
+  'border border-slate-400 bg-white text-left text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60'
 
 function generateTempId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -126,6 +131,20 @@ export default function AdminDashboard() {
   const [categoryEditError, setCategoryEditError] = useState<string | null>(null)
   const [categoryBeingEdited, setCategoryBeingEdited] = useState<CategorySummary | null>(null)
   const [isSavingCategoryEdit, setIsSavingCategoryEdit] = useState(false)
+  const [partsOfSpeech, setPartsOfSpeech] = useState<PartOfSpeechOption[]>([])
+  const [isPartDialogOpen, setIsPartDialogOpen] = useState(false)
+  const [partLabel, setPartLabel] = useState('')
+  const [partValue, setPartValue] = useState('')
+  const [partOrder, setPartOrder] = useState('')
+  const [partError, setPartError] = useState<string | null>(null)
+  const [isSavingPart, setIsSavingPart] = useState(false)
+  const [isPartEditDialogOpen, setIsPartEditDialogOpen] = useState(false)
+  const [partBeingEdited, setPartBeingEdited] = useState<PartOfSpeechOption | null>(null)
+  const [partEditLabel, setPartEditLabel] = useState('')
+  const [partEditValue, setPartEditValue] = useState('')
+  const [partEditOrder, setPartEditOrder] = useState('')
+  const [partEditError, setPartEditError] = useState<string | null>(null)
+  const [isSavingPartEdit, setIsSavingPartEdit] = useState(false)
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({})
   const [processingSubmissionId, setProcessingSubmissionId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -172,20 +191,33 @@ export default function AdminDashboard() {
     setEntries(data)
   }, [])
 
+  const refreshPartsOfSpeech = useCallback(async () => {
+    const data = await DictionaryAPI.getAdminPartsOfSpeechOptions()
+    setPartsOfSpeech(data)
+  }, [])
+
   const fetchAllData = useCallback(async () => {
     try {
       setIsLoading(true)
       setGlobalError(null)
-      const [statsData, pendingData, entriesData, categoriesData] = await Promise.all([
+      const [
+        statsData,
+        pendingData,
+        entriesData,
+        categoriesData,
+        partsData,
+      ] = await Promise.all([
         DictionaryAPI.getAdminStats(),
         DictionaryAPI.getPendingSubmissions(),
         DictionaryAPI.getAdminEntries(),
         DictionaryAPI.getCategories(),
+        DictionaryAPI.getAdminPartsOfSpeechOptions(),
       ])
       setStats(statsData)
       setPendingSubmissions(pendingData)
       setEntries(entriesData)
       setCategories(categoriesData)
+      setPartsOfSpeech(partsData)
     } catch (error) {
       console.error('Admin dashboard fetch failed:', error)
       setGlobalError('Nie udało się pobrać danych panelu administratora. Spróbuj ponownie później.')
@@ -307,6 +339,100 @@ export default function AdminDashboard() {
       setCategoryEditError('Nie udało się zaktualizować kategorii. Spróbuj ponownie.')
     } finally {
       setIsSavingCategoryEdit(false)
+    }
+  }
+
+  const parseOrderInput = (value: string): number | undefined => {
+    const trimmed = value.trim()
+    if (!trimmed) {
+      return undefined
+    }
+    const parsed = Number(trimmed)
+    return Number.isFinite(parsed) ? parsed : undefined
+  }
+
+  const handleCreatePartOfSpeech = async (event: FormEvent) => {
+    event.preventDefault()
+    const label = partLabel.trim()
+    const value = partValue.trim()
+
+    if (!label) {
+      setPartError('Podaj nazwę części mowy.')
+      return
+    }
+
+    setIsSavingPart(true)
+    setPartError(null)
+
+    try {
+      await DictionaryAPI.createPartOfSpeechOption({
+        label,
+        value: value || undefined,
+        order: parseOrderInput(partOrder),
+      })
+      await refreshPartsOfSpeech()
+      setPartLabel('')
+      setPartValue('')
+      setPartOrder('')
+      setIsPartDialogOpen(false)
+    } catch (error) {
+      console.error('Create part of speech failed:', error)
+      setPartError(error instanceof Error ? error.message : 'Nie udało się dodać części mowy.')
+    } finally {
+      setIsSavingPart(false)
+    }
+  }
+
+  const openPartOfSpeechEditDialog = (part: PartOfSpeechOption) => {
+    setPartBeingEdited(part)
+    setPartEditLabel(part.label)
+    setPartEditValue(part.value)
+    setPartEditOrder(part.order.toString())
+    setPartEditError(null)
+    setIsPartEditDialogOpen(true)
+  }
+
+  const handleUpdatePartOfSpeech = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!partBeingEdited) {
+      return
+    }
+
+    const label = partEditLabel.trim()
+    const value = partEditValue.trim()
+
+    if (!label) {
+      setPartEditError('Podaj nazwę części mowy.')
+      return
+    }
+
+    setIsSavingPartEdit(true)
+    setPartEditError(null)
+
+    try {
+      await DictionaryAPI.updatePartOfSpeechOption(partBeingEdited.id, {
+        label,
+        value: value || undefined,
+        order: parseOrderInput(partEditOrder),
+      })
+      await refreshPartsOfSpeech()
+      setIsPartEditDialogOpen(false)
+      setPartBeingEdited(null)
+    } catch (error) {
+      console.error('Update part of speech failed:', error)
+      setPartEditError(error instanceof Error ? error.message : 'Nie udało się zaktualizować części mowy.')
+    } finally {
+      setIsSavingPartEdit(false)
+    }
+  }
+
+  const handleDeletePartOfSpeech = async (part: PartOfSpeechOption) => {
+    try {
+      await DictionaryAPI.deletePartOfSpeechOption(part.id)
+      await refreshPartsOfSpeech()
+    } catch (error) {
+      console.error('Delete part of speech failed:', error)
+      setGlobalError('Nie udało się usunąć części mowy. Upewnij się, że nie jest używana w słowniku.')
     }
   }
 
@@ -462,28 +588,33 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-background">
       <header className="border-b bg-card shadow-sm">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center space-x-4">
-              <Settings className="h-6 w-6 text-primary" />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 sm:items-center">
+              <Settings className="mt-1 h-6 w-6 text-primary sm:mt-0" />
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Panel administratora</h1>
+                <h1 className="text-xl font-bold text-foreground sm:text-2xl">Panel administratora</h1>
                 <p className="text-sm text-muted-foreground">Śląski Słownik Majsterkowy</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <Button variant="outline" asChild>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+              <Button variant="outline" asChild className="w-full justify-center sm:w-auto">
                 <Link href="/">
                   <Eye className="mr-2 h-4 w-4" />
                   Podgląd słownika
                 </Link>
               </Button>
-              <Button variant="secondary" asChild>
+              <Button variant="secondary" asChild className="w-full justify-center sm:w-auto">
                 <Link href="/dodaj">
                   <Plus className="mr-2 h-4 w-4" />
                   Dodaj wpis
                 </Link>
               </Button>
-              <Button variant="destructive" onClick={handleLogout} disabled={isLoggingOut}>
+              <Button
+                variant="destructive"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="w-full justify-center sm:w-auto"
+              >
                 {isLoggingOut ? (
                   <span className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -513,7 +644,7 @@ export default function AdminDashboard() {
           </Card>
         )}
 
-        <div className="grid gap-6 md:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -566,12 +697,16 @@ export default function AdminDashboard() {
         </div>
 
         <Tabs defaultValue="pending" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="pending">
-              Oczekujące zgłoszenia ({pendingSubmissions.length})
+          <TabsList className="flex h-auto w-full flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+            <TabsTrigger value="pending" className="w-full sm:w-auto sm:flex-1">
+              Oczekujące ({pendingSubmissions.length})
             </TabsTrigger>
-            <TabsTrigger value="entries">Wpisy ({entries.length})</TabsTrigger>
-            <TabsTrigger value="settings">Ustawienia</TabsTrigger>
+            <TabsTrigger value="entries" className="w-full sm:w-auto sm:flex-1">
+              Wpisy ({entries.length})
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="w-full sm:w-auto sm:flex-1">
+              Ustawienia
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pending" className="space-y-6">
@@ -652,7 +787,7 @@ export default function AdminDashboard() {
                                     <div className="grid gap-4 md:grid-cols-2">
                                       <div className="space-y-1">
                                         <Label>Wymowa</Label>
-                                        <p className="text-muted-foreground">
+                                        <p className="font-ipa text-muted-foreground">
                                           {submission.pronunciation ? `[${submission.pronunciation}]` : '—'}
                                         </p>
                                       </div>
@@ -735,8 +870,149 @@ export default function AdminDashboard() {
                                       </Button>
                                     </div>
                                   </div>
-                                </DialogContent>
-                              </Dialog>
+      </DialogContent>
+    </Dialog>
+
+      <Dialog
+        open={isPartDialogOpen}
+        onOpenChange={open => {
+          setIsPartDialogOpen(open)
+          if (!open) {
+            setPartLabel('')
+            setPartValue('')
+            setPartOrder('')
+            setPartError(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Dodaj część mowy</DialogTitle>
+            <DialogDescription>Określ nazwę oraz (opcjonalnie) wartość techniczną i kolejność.</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleCreatePartOfSpeech}>
+            <div className="space-y-2">
+              <Label htmlFor="part-label">Nazwa</Label>
+              <Input
+                id="part-label"
+                value={partLabel}
+                onChange={event => setPartLabel(event.target.value)}
+                className={inputStyles}
+                placeholder="np. przymiotnik"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="part-value">Wartość (opcjonalnie)</Label>
+              <Input
+                id="part-value"
+                value={partValue}
+                onChange={event => setPartValue(event.target.value)}
+                className={inputStyles}
+                placeholder="np. przymiotnik"
+              />
+              <p className="text-xs text-muted-foreground">
+                Wartość wykorzystywana w bazie danych i API. Pozostaw puste, aby wygenerować ją na podstawie nazwy.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="part-order">Kolejność (opcjonalnie)</Label>
+              <Input
+                id="part-order"
+                type="number"
+                value={partOrder}
+                onChange={event => setPartOrder(event.target.value)}
+                className={inputStyles}
+                placeholder="np. 1"
+                min={0}
+              />
+            </div>
+            {partError && <p className="text-sm text-red-600">{partError}</p>}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsPartDialogOpen(false)}
+                disabled={isSavingPart}
+              >
+                Anuluj
+              </Button>
+              <Button type="submit" disabled={isSavingPart}>
+                {isSavingPart ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                Dodaj część mowy
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isPartEditDialogOpen}
+        onOpenChange={open => {
+          setIsPartEditDialogOpen(open)
+          if (!open) {
+            setPartBeingEdited(null)
+            setPartEditLabel('')
+            setPartEditValue('')
+            setPartEditOrder('')
+            setPartEditError(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edytuj część mowy</DialogTitle>
+            <DialogDescription>Zaktualizuj nazwę, wartość lub kolejność części mowy.</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleUpdatePartOfSpeech}>
+            <div className="space-y-2">
+              <Label htmlFor="edit-part-label">Nazwa</Label>
+              <Input
+                id="edit-part-label"
+                value={partEditLabel}
+                onChange={event => setPartEditLabel(event.target.value)}
+                className={inputStyles}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-part-value">Wartość</Label>
+              <Input
+                id="edit-part-value"
+                value={partEditValue}
+                onChange={event => setPartEditValue(event.target.value)}
+                className={inputStyles}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-part-order">Kolejność</Label>
+              <Input
+                id="edit-part-order"
+                type="number"
+                value={partEditOrder}
+                onChange={event => setPartEditOrder(event.target.value)}
+                className={inputStyles}
+                min={0}
+              />
+            </div>
+            {partEditError && <p className="text-sm text-red-600">{partEditError}</p>}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsPartEditDialogOpen(false)}
+                disabled={isSavingPartEdit}
+              >
+                Anuluj
+              </Button>
+              <Button type="submit" disabled={isSavingPartEdit || !partBeingEdited}>
+                {isSavingPartEdit ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                Zapisz zmiany
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -779,8 +1055,8 @@ export default function AdminDashboard() {
                     <CardTitle>Wpisy w słowniku</CardTitle>
                     <CardDescription>Zarządzaj zatwierdzonymi hasłami</CardDescription>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="relative w-full md:w-64">
+                  <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center md:w-auto">
+                    <div className="relative w-full sm:max-w-xs md:max-w-none md:w-64">
                       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         placeholder="Szukaj wpisów..."
@@ -789,7 +1065,7 @@ export default function AdminDashboard() {
                         className="pl-10"
                       />
                     </div>
-                    <Button variant="outline" asChild>
+                    <Button variant="outline" asChild className="w-full sm:w-auto">
                       <Link href="/dodaj">
                         <Plus className="mr-2 h-4 w-4" />
                         Nowy wpis
@@ -908,184 +1184,254 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle>Części mowy</CardTitle>
+                  <CardDescription>Zarządzaj listą dostępnych części mowy.</CardDescription>
+                </div>
+                <Button onClick={() => setIsPartDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Dodaj część mowy
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {partsOfSpeech.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Brak zdefiniowanych części mowy. Dodaj pierwszą, aby móc wybierać ją podczas edycji wpisów.
+                  </p>
+                ) : (
+                  <ul className="space-y-3">
+                    {partsOfSpeech.map(part => (
+                      <li
+                        key={part.id}
+                        className="flex flex-col gap-2 rounded border border-slate-200 bg-white p-3 text-sm text-slate-900 md:flex-row md:items-center md:justify-between"
+                      >
+                        <div>
+                          <p className="font-medium">{part.label}</p>
+                          <p className="text-xs text-muted-foreground">Wartość: <span className="font-mono">{part.value}</span></p>
+                          <p className="text-xs text-muted-foreground">Kolejność: {part.order}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => openPartOfSpeechEditDialog(part)}>
+                            Edytuj
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeletePartOfSpeech(part)}>
+                            Usuń
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
 
       <Dialog open={entryDialogOpen} onOpenChange={open => (open ? setEntryDialogOpen(true) : closeEntryDialog())}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Edytuj wpis</DialogTitle>
-            <DialogDescription>Zaktualizuj wszystkie informacje dotyczące hasła.</DialogDescription>
-          </DialogHeader>
-          {entryForm ? (
-            <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="sourceWord">Słowo źródłowe</Label>
-                  <Input
-                    id="sourceWord"
-                    value={entryForm.sourceWord}
-                    onChange={event => updateEntryFormField('sourceWord', event.target.value)}
-                    className={inputStyles}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="targetWord">Tłumaczenie</Label>
-                  <Input
-                    id="targetWord"
-                    value={entryForm.targetWord}
-                    onChange={event => updateEntryFormField('targetWord', event.target.value)}
-                    className={inputStyles}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="slug">Slug</Label>
-                  <Input
-                    id="slug"
-                    value={entryForm.slug}
-                    onChange={event => updateEntryFormField('slug', event.target.value)}
-                    placeholder="np. szychta"
-                    className={inputStyles}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Kategoria</Label>
-                  <Select
-                    value={entryForm.categoryId}
-                    onValueChange={value => updateEntryFormField('categoryId', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Wybierz kategorię" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map(category => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={entryForm.status} onValueChange={value => updateEntryFormField('status', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Wybierz status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map(status => (
-                        <SelectItem key={status} value={status}>
-                          {status}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="pronunciation">Wymowa</Label>
-                  <Input
-                    id="pronunciation"
-                    value={entryForm.pronunciation}
-                    onChange={event => updateEntryFormField('pronunciation', event.target.value)}
-                    placeholder="np. šihta"
-                    className={inputStyles}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="partOfSpeech">Część mowy</Label>
-                  <Input
-                    id="partOfSpeech"
-                    value={entryForm.partOfSpeech}
-                    onChange={event => updateEntryFormField('partOfSpeech', event.target.value)}
-                    placeholder="np. rzeczownik"
-                    className={inputStyles}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notatki</Label>
-                  <Input
-                    id="notes"
-                    value={entryForm.notes}
-                    onChange={event => updateEntryFormField('notes', event.target.value)}
-                    placeholder="Dodatkowe informacje"
-                    className={inputStyles}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="alternatives">Alternatywne tłumaczenia</Label>
-                <Textarea
-                  id="alternatives"
-                  value={entryForm.alternativeTranslationsText}
-                  onChange={event => updateEntryFormField('alternativeTranslationsText', event.target.value)}
-                  placeholder="Każde tłumaczenie w nowej linii lub rozdzielone przecinkami"
-                  rows={3}
-                  className={textareaStyles}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Przykłady użycia</Label>
-                  <Button variant="outline" size="sm" onClick={addExampleSentence}>
-                    <Plus className="mr-2 h-4 w-4" /> Dodaj przykład
-                  </Button>
-                </div>
-                <div className="space-y-4">
-                  {entryForm.exampleSentences.map(example => (
-                    <div key={example.tempId} className="grid gap-3 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label>Zdanie źródłowe</Label>
-                        <Textarea
-                          value={example.sourceText}
-                          onChange={event => updateExampleSentence(example.tempId, 'sourceText', event.target.value)}
-                          rows={2}
-                          className={textareaStyles}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Tłumaczenie</Label>
-                        <Textarea
-                          value={example.translatedText}
-                          onChange={event => updateExampleSentence(example.tempId, 'translatedText', event.target.value)}
-                          rows={2}
-                          className={textareaStyles}
-                        />
-                      </div>
-                      <div className="md:col-span-2 flex justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeExampleSentence(example.tempId)}
-                          disabled={entryForm.exampleSentences.length <= 1}
-                        >
-                          Usuń przykład
-                        </Button>
-                      </div>
+        <DialogContent className="flex w-full max-w-5xl max-h-[95vh] overflow-y-auto p-0 sm:max-h-[90vh]">
+          <div className="flex h-full w-full flex-col">
+            <DialogHeader className="flex-shrink-0 border-b bg-white px-6 py-4">
+              <DialogTitle>Edytuj wpis</DialogTitle>
+              <DialogDescription>Zaktualizuj wszystkie informacje dotyczące hasła.</DialogDescription>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              {entryForm ? (
+                <div className="space-y-6 pb-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Status</Label>
+                      <Select value={entryForm.status} onValueChange={value => updateEntryFormField('status', value)}>
+                        <SelectTrigger className={selectStyles}>
+                          <SelectValue placeholder="Wybierz status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATUS_OPTIONS.map(status => (
+                            <SelectItem key={status} value={status}>
+                              {status}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="slug">Slug</Label>
+                      <Input
+                        id="slug"
+                        value={entryForm.slug}
+                        onChange={event => updateEntryFormField('slug', event.target.value)}
+                        placeholder="np. szychta"
+                        className={inputStyles}
+                      />
+                    </div>
+                  </div>
 
-              {entryError && <p className="text-sm text-red-600">{entryError}</p>}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="sourceWord">Słowo źródłowe</Label>
+                      <Input
+                        id="sourceWord"
+                        value={entryForm.sourceWord}
+                        onChange={event => updateEntryFormField('sourceWord', event.target.value)}
+                        className={inputStyles}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="targetWord">Tłumaczenie</Label>
+                      <Input
+                        id="targetWord"
+                        value={entryForm.targetWord}
+                        onChange={event => updateEntryFormField('targetWord', event.target.value)}
+                        className={inputStyles}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="alternatives">Alternatywne tłumaczenia</Label>
+                    <Textarea
+                      id="alternatives"
+                      value={entryForm.alternativeTranslationsText}
+                      onChange={event => updateEntryFormField('alternativeTranslationsText', event.target.value)}
+                      placeholder="Każde tłumaczenie w nowej linii lub rozdzielone przecinkami"
+                      rows={3}
+                      className={textareaStyles}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="partOfSpeech">Część mowy</Label>
+                      <Select
+                        value={entryForm.partOfSpeech || 'none'}
+                        onValueChange={value => updateEntryFormField('partOfSpeech', value === 'none' ? '' : value)}
+                      >
+                        <SelectTrigger className={selectStyles}>
+                          <SelectValue placeholder="Wybierz część mowy" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Brak</SelectItem>
+                          {partsOfSpeech.length > 0 ? (
+                            partsOfSpeech.map(part => (
+                              <SelectItem key={part.id} value={part.value}>
+                                {part.label}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="__empty__" disabled>
+                              Brak zdefiniowanych części mowy
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="category">Kategoria</Label>
+                      <Select
+                        value={entryForm.categoryId}
+                        onValueChange={value => updateEntryFormField('categoryId', value)}
+                      >
+                        <SelectTrigger className={selectStyles}>
+                          <SelectValue placeholder="Wybierz kategorię" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map(category => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="pronunciation">Wymowa</Label>
+                    <Input
+                      id="pronunciation"
+                      value={entryForm.pronunciation}
+                      onChange={event => updateEntryFormField('pronunciation', event.target.value)}
+                      placeholder="np. [ˈʂixta]"
+                      className={`${inputStyles} font-ipa`}
+                    />
+                    <p className="text-xs text-slate-500">
+                      Jak to słowo wymówić po polsku? Transkrypcja fonetyczna uproszczona lub <a className="underline hover:text-primary" href="https://pl.wikipedia.org/wiki/Transkrypcja_fonetyczna" target="_blank" rel="noreferrer">IPA</a>.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Przykłady użycia</Label>
+                      <Button variant="outline" size="sm" onClick={addExampleSentence}>
+                        <Plus className="mr-2 h-4 w-4" /> Dodaj przykład
+                      </Button>
+                    </div>
+                    <div className="space-y-4">
+                      {entryForm.exampleSentences.map(example => (
+                        <div key={example.tempId} className="grid gap-3 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label>Zdanie źródłowe</Label>
+                            <Textarea
+                              value={example.sourceText}
+                              onChange={event => updateExampleSentence(example.tempId, 'sourceText', event.target.value)}
+                              rows={2}
+                              className={textareaStyles}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Tłumaczenie</Label>
+                            <Textarea
+                              value={example.translatedText}
+                              onChange={event => updateExampleSentence(example.tempId, 'translatedText', event.target.value)}
+                              rows={2}
+                              className={textareaStyles}
+                            />
+                          </div>
+                          <div className="md:col-span-2 flex justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeExampleSentence(example.tempId)}
+                              disabled={entryForm.exampleSentences.length <= 1}
+                            >
+                              Usuń przykład
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Notatki</Label>
+                    <Textarea
+                      id="notes"
+                      value={entryForm.notes}
+                      onChange={event => updateEntryFormField('notes', event.target.value)}
+                      placeholder="Dodatkowe informacje"
+                      rows={3}
+                      className={textareaStyles}
+                    />
+                  </div>
+
+                  {entryError && <p className="text-sm text-red-600">{entryError}</p>}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nie znaleziono danych wpisu.</p>
+              )}
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Nie znaleziono danych wpisu.</p>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={closeEntryDialog} disabled={isSavingEntry}>
-              Anuluj
-            </Button>
-            <Button onClick={handleSaveEntry} disabled={isSavingEntry || !entryForm}>
-              {isSavingEntry ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-              Zapisz zmiany
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="flex-shrink-0 border-t bg-white px-6 py-4">
+              <Button variant="outline" onClick={closeEntryDialog} disabled={isSavingEntry}>
+                Anuluj
+              </Button>
+              <Button onClick={handleSaveEntry} disabled={isSavingEntry || !entryForm}>
+                {isSavingEntry ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                Zapisz zmiany
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

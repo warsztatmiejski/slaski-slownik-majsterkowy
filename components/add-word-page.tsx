@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DictionaryAPI, type PartOfSpeechOption } from '@/lib/api-clients'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
@@ -24,6 +25,7 @@ interface CategoryOption {
   slug: string
   description?: string
   type?: string
+  entryCount?: number
 }
 
 interface SubmissionForm {
@@ -40,18 +42,18 @@ interface SubmissionForm {
   isSuggestingCategory: boolean
 }
 
-const partsOfSpeech = [
-  'rzeczownik',
-  'czasownik',
-  'przymiotnik',
-  'przysłówek',
-  'liczebnik',
-  'zaimek',
-  'spójnik',
-  'przyimek',
-  'partykuła',
-  'imiesłów',
-  'wykrzyknik',
+const defaultPartsOfSpeech: Array<{ label: string; value: string }> = [
+  { label: 'rzeczownik', value: 'rzeczownik' },
+  { label: 'czasownik', value: 'czasownik' },
+  { label: 'przymiotnik', value: 'przymiotnik' },
+  { label: 'przysłówek', value: 'przyslowek' },
+  { label: 'liczebnik', value: 'liczebnik' },
+  { label: 'zaimek', value: 'zaimek' },
+  { label: 'spójnik', value: 'spojnik' },
+  { label: 'przyimek', value: 'przyimek' },
+  { label: 'partykuła', value: 'partykula' },
+  { label: 'imiesłów', value: 'imieslow' },
+  { label: 'wykrzyknik', value: 'wykrzyknik' },
 ]
 
 const languageLabel: Record<'SILESIAN' | 'POLISH', string> = {
@@ -64,7 +66,8 @@ const fieldFrame =
 const inputField = `w-full rounded-sm text-base ${fieldFrame}`
 const wordField = `w-full rounded-sm text-lg font-semibold tracking-wide ${fieldFrame}`
 const textareaField = `w-full min-h-[170px] rounded-sm px-3 py-3 text-base ${fieldFrame}`
-const selectTriggerStyles = `w-full rounded-sm px-3 py-3 text-base font-medium text-left ${fieldFrame}`
+const selectTriggerStyles =
+  'w-full rounded-sm border border-slate-400 bg-white px-3 py-3 text-base font-medium text-left text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-60'
 const separatorStyles = 'h-[2px] w-full bg-slate-900'
 
 export default function AddWordPage() {
@@ -89,6 +92,25 @@ export default function AddWordPage() {
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
   const [categoryFetchError, setCategoryFetchError] = useState<string | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [partsOfSpeechOptions, setPartsOfSpeechOptions] = useState<PartOfSpeechOption[]>([])
+  const [isLoadingPartsOfSpeech, setIsLoadingPartsOfSpeech] = useState(true)
+
+  const availablePartsOfSpeech = useMemo(() => {
+    if (partsOfSpeechOptions.length > 0) {
+      return [...partsOfSpeechOptions].sort((a, b) => {
+        if (a.order !== b.order) {
+          return a.order - b.order
+        }
+        return a.label.localeCompare(b.label, 'pl', { sensitivity: 'base' })
+      })
+    }
+    return defaultPartsOfSpeech.map((option, index) => ({
+      id: option.value,
+      label: option.label,
+      value: option.value,
+      order: index,
+    }))
+  }, [partsOfSpeechOptions])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -123,6 +145,33 @@ export default function AddWordPage() {
     }
 
     loadCategories()
+
+    return () => controller.abort()
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    const loadPartsOfSpeech = async () => {
+      try {
+        setIsLoadingPartsOfSpeech(true)
+        const parts = await DictionaryAPI.getPartsOfSpeechOptions()
+        if (!controller.signal.aborted) {
+          setPartsOfSpeechOptions(parts)
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error('Parts of speech fetch failed:', error)
+          setPartsOfSpeechOptions([])
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoadingPartsOfSpeech(false)
+        }
+      }
+    }
+
+    void loadPartsOfSpeech()
 
     return () => controller.abort()
   }, [])
@@ -288,7 +337,7 @@ export default function AddWordPage() {
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="sourceWord">
-                    {languageLabel[form.sourceLang]} słowo <span className="text-primary">*</span>
+                    {languageLabel[form.sourceLang]} <span className="text-primary">*</span>
                   </Label>
                   <Input
                     variant="large"
@@ -302,7 +351,7 @@ export default function AddWordPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="targetWord">
-                    {languageLabel[form.targetLang]} tłumaczenia <span className="text-primary">*</span>
+                    {languageLabel[form.targetLang]} <span className="text-primary">*</span>
                   </Label>
                   <Input
                     variant="large"
@@ -330,9 +379,12 @@ export default function AddWordPage() {
                     id="pronunciation"
                     value={form.pronunciation}
                     onChange={e => setForm(prev => ({ ...prev, pronunciation: e.target.value }))}
-                    placeholder="np. szichta"
-                    className={inputField}
+                    placeholder="np. [ˈʂixta]"
+                    className={`${inputField} font-ipa`}
                   />
+                  <p className="text-xs text-slate-600">
+                    Jak to słowo wymówić po polsku? Transkrypcja fonetyczna uproszczona lub <a className="underline hover:text-primary" href="https://pl.wikipedia.org/wiki/Transkrypcja_fonetyczna" target="_blank" rel="noreferrer">IPA</a>.
+                  </p>
                 </div>
                 <div className="space-y-3">
                   <Label htmlFor="category">Kategoria</Label>
@@ -421,11 +473,21 @@ export default function AddWordPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Brak</SelectItem>
-                      {partsOfSpeech.map(pos => (
-                        <SelectItem key={pos} value={pos}>
-                          {pos}
+                      {isLoadingPartsOfSpeech ? (
+                        <SelectItem value="__loading__" disabled>
+                          Ładowanie części mowy…
                         </SelectItem>
-                      ))}
+                      ) : availablePartsOfSpeech.length > 0 ? (
+                        availablePartsOfSpeech.map(option => (
+                          <SelectItem key={option.id} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="__empty__" disabled>
+                          Brak zdefiniowanych części mowy
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -442,6 +504,9 @@ export default function AddWordPage() {
                   Dodaj przykład
                 </Button>
               </div>
+              <p className="text-sm text-slate-700">
+                Podaj przykład zdania z wykorzystaniem słowa wraz z tłumaczeniem na język polski. Możesz dodać więcej przykładów.
+              </p>
 
               <div className="space-y-10">
                 {form.exampleSentences.map((example, index) => (
