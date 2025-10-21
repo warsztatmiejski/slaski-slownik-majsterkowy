@@ -47,6 +47,12 @@ import {
 import type { Language } from '@prisma/client'
 
 const STATUS_OPTIONS = ['DRAFT', 'PENDING', 'APPROVED', 'REJECTED'] as const
+const STATUS_LABELS: Record<(typeof STATUS_OPTIONS)[number], string> = {
+  DRAFT: 'Szkic',
+  PENDING: 'Oczekujące',
+  APPROVED: 'Zatwierdzone',
+  REJECTED: 'Odrzucone',
+}
 
 interface ExampleFormState {
   id?: string
@@ -1250,7 +1256,7 @@ export default function AdminDashboard() {
                         <SelectContent>
                           {STATUS_OPTIONS.map(status => (
                             <SelectItem key={status} value={status}>
-                              {status}
+                              {STATUS_LABELS[status]}
                             </SelectItem>
                           ))}
                         </SelectContent>
