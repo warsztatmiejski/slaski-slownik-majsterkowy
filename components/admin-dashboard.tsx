@@ -54,6 +54,10 @@ const STATUS_LABELS: Record<(typeof STATUS_OPTIONS)[number], string> = {
   REJECTED: 'Odrzucone',
 }
 
+function sortCategoriesByName<T extends { name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => a.name.localeCompare(b.name, 'pl', { sensitivity: 'base' }))
+}
+
 interface ExampleFormState {
   id?: string
   tempId: string
@@ -134,9 +138,14 @@ export default function AdminDashboard() {
   const [isCategoryEditDialogOpen, setIsCategoryEditDialogOpen] = useState(false)
   const [categoryEditName, setCategoryEditName] = useState('')
   const [categoryEditDescription, setCategoryEditDescription] = useState('')
+  const [categoryEditSlug, setCategoryEditSlug] = useState('')
   const [categoryEditError, setCategoryEditError] = useState<string | null>(null)
   const [categoryBeingEdited, setCategoryBeingEdited] = useState<CategorySummary | null>(null)
   const [isSavingCategoryEdit, setIsSavingCategoryEdit] = useState(false)
+  const [isCategoryDeleteDialogOpen, setIsCategoryDeleteDialogOpen] = useState(false)
+  const [categoryPendingRemoval, setCategoryPendingRemoval] = useState<CategorySummary | null>(null)
+  const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null)
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false)
   const [partsOfSpeech, setPartsOfSpeech] = useState<PartOfSpeechOption[]>([])
   const [isPartDialogOpen, setIsPartDialogOpen] = useState(false)
   const [partLabel, setPartLabel] = useState('')
@@ -222,7 +231,7 @@ export default function AdminDashboard() {
       setStats(statsData)
       setPendingSubmissions(pendingData)
       setEntries(entriesData)
-      setCategories(categoriesData)
+      setCategories(sortCategoriesByName(categoriesData))
       setPartsOfSpeech(partsData)
     } catch (error) {
       console.error('Admin dashboard fetch failed:', error)
@@ -270,7 +279,12 @@ export default function AdminDashboard() {
 
     try {
       const response = await DictionaryAPI.createCategory({ name, slug: slug || undefined })
-      setCategories(prev => [...prev, response.category])
+      setCategories(prev =>
+        sortCategoriesByName([
+          ...prev,
+          { ...response.category, entryCount: 0 },
+        ]),
+      )
       setNewCategoryName('')
       setNewCategorySlug('')
       setIsCategoryDialogOpen(false)
@@ -306,6 +320,7 @@ export default function AdminDashboard() {
     setCategoryBeingEdited(category)
     setCategoryEditName(category.name)
     setCategoryEditDescription(category.description ?? '')
+    setCategoryEditSlug(category.slug)
     setCategoryEditError(null)
     setIsCategoryEditDialogOpen(true)
   }
@@ -317,10 +332,15 @@ export default function AdminDashboard() {
     }
 
     const name = categoryEditName.trim()
+    const slug = categoryEditSlug.trim()
     const description = categoryEditDescription.trim()
 
     if (!name) {
       setCategoryEditError('Podaj nazwę kategorii.')
+      return
+    }
+    if (!slug) {
+      setCategoryEditError('Podaj slug kategorii.')
       return
     }
 
@@ -330,16 +350,22 @@ export default function AdminDashboard() {
 
       const response = await DictionaryAPI.updateCategory(categoryBeingEdited.id, {
         name,
+        slug,
         description: description || null,
       })
 
       setCategories(prev =>
-        prev.map(category =>
-          category.id === response.category.id ? response.category : category,
+        sortCategoriesByName(
+          prev.map(category =>
+            category.id === response.category.id
+              ? { ...response.category, entryCount: category.entryCount ?? 0 }
+              : category,
+          ),
         ),
       )
       setIsCategoryEditDialogOpen(false)
       setCategoryBeingEdited(null)
+      setCategoryEditSlug('')
     } catch (error) {
       console.error('Update category failed:', error)
       setCategoryEditError('Nie udało się zaktualizować kategorii. Spróbuj ponownie.')
@@ -347,6 +373,36 @@ export default function AdminDashboard() {
       setIsSavingCategoryEdit(false)
     }
   }
+
+  const openCategoryDeleteDialog = (category: CategorySummary) => {
+    setCategoryPendingRemoval(category)
+    setCategoryDeleteError(null)
+    setIsCategoryDeleteDialogOpen(true)
+  }
+
+  const handleDeleteCategory = useCallback(async () => {
+    if (!categoryPendingRemoval) {
+      return
+    }
+
+    try {
+      setIsDeletingCategory(true)
+      await DictionaryAPI.deleteCategory(categoryPendingRemoval.id)
+      setCategories(prev =>
+        sortCategoriesByName(prev.filter(category => category.id !== categoryPendingRemoval.id)),
+      )
+      setIsCategoryDeleteDialogOpen(false)
+      setCategoryPendingRemoval(null)
+      setCategoryDeleteError(null)
+    } catch (error) {
+      console.error('Delete category failed:', error)
+      setCategoryDeleteError(
+        error instanceof Error ? error.message : 'Nie udało się usunąć kategorii. Spróbuj ponownie.',
+      )
+    } finally {
+      setIsDeletingCategory(false)
+    }
+  }, [categoryPendingRemoval])
 
   const parseOrderInput = (value: string): number | undefined => {
     const trimmed = value.trim()
@@ -1148,44 +1204,55 @@ export default function AdminDashboard() {
                   <p className="text-sm text-muted-foreground">Brak zdefiniowanych kategorii.</p>
                 ) : (
                   <ul className="space-y-3">
-                    {categories.map(category => (
-                      <li
-                        key={category.id}
-                        className="flex flex-col gap-2 rounded border border-slate-200 bg-white p-3 text-sm text-slate-900 md:flex-row md:items-center md:justify-between"
-                      >
-                        <div>
-                          <p className="font-medium">{category.name}</p>
-                          <p className="text-xs text-muted-foreground">{category.slug}</p>
-                          {category.description && (
-                            <p className="text-xs text-muted-foreground">{category.description}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openCategoryEditDialog(category)}
-                          >
-                            Edytuj
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                              try {
-                                await DictionaryAPI.deleteCategory(category.id)
-                                setCategories(prev => prev.filter(item => item.id !== category.id))
-                              } catch (error) {
-                                console.error('Delete category failed:', error)
-                                setGlobalError('Nie udało się usunąć kategorii. Spróbuj ponownie.')
+                    {categories.map(category => {
+                      const linkedEntries = category.entryCount ?? 0
+                      const hasLinkedEntries = linkedEntries > 0
+                      const linkedLabel =
+                        linkedEntries === 1
+                          ? '1 powiązane hasło'
+                          : `${linkedEntries} powiązanych haseł`
+
+                      return (
+                        <li
+                          key={category.id}
+                          className="flex flex-col gap-2 rounded border border-slate-200 bg-white p-3 text-sm text-slate-900 md:flex-row md:items-center md:justify-between"
+                        >
+                          <div className="space-y-1">
+                            <p className="font-medium">{category.name}</p>
+                            <p className="text-xs text-muted-foreground">{category.slug}</p>
+                            {category.description ? (
+                              <p className="text-xs text-muted-foreground">{category.description}</p>
+                            ) : null}
+                            <p className="text-xs text-muted-foreground">
+                              {hasLinkedEntries ? linkedLabel : 'Brak powiązanych haseł'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openCategoryEditDialog(category)}
+                            >
+                              Edytuj
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={hasLinkedEntries}
+                              title={
+                                hasLinkedEntries
+                                  ? 'Usuń powiązane hasła, aby móc skasować kategorię.'
+                                  : undefined
                               }
-                            }}
-                          >
-                            Usuń
-                          </Button>
-                        </div>
-                      </li>
-                    ))}
+                              onClick={() => openCategoryDeleteDialog(category)}
+                            >
+                              Usuń
+                            </Button>
+                          </div>
+                        </li>
+                      )
+                    })}
                   </ul>
                 )}
               </CardContent>
@@ -1546,13 +1613,14 @@ export default function AdminDashboard() {
             setCategoryEditError(null)
             setCategoryEditName('')
             setCategoryEditDescription('')
+            setCategoryEditSlug('')
           }
         }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edytuj kategorię</DialogTitle>
-            <DialogDescription>Zaktualizuj nazwę i opis kategorii.</DialogDescription>
+            <DialogDescription>Zaktualizuj nazwę, slug i opis kategorii.</DialogDescription>
           </DialogHeader>
           <form className="space-y-4" onSubmit={handleUpdateCategory}>
             <div className="space-y-2">
@@ -1563,6 +1631,17 @@ export default function AdminDashboard() {
                 onChange={event => setCategoryEditName(event.target.value)}
                 className={inputStyles}
                 placeholder="np. Górnictwo"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-category-slug">Slug</Label>
+              <Input
+                id="edit-category-slug"
+                value={categoryEditSlug}
+                onChange={event => setCategoryEditSlug(event.target.value)}
+                className={inputStyles}
+                placeholder="np. gornictwo"
                 required
               />
             </div>
@@ -1602,6 +1681,67 @@ export default function AdminDashboard() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isCategoryDeleteDialogOpen}
+        onOpenChange={open => {
+          setIsCategoryDeleteDialogOpen(open)
+          if (!open) {
+            setCategoryPendingRemoval(null)
+            setCategoryDeleteError(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Usuń kategorię</DialogTitle>
+            <DialogDescription>
+              Tej operacji nie można cofnąć. Kategoria zostanie usunięta ze słownika.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2 text-sm text-muted-foreground">
+            <p>
+              Czy na pewno chcesz usunąć kategorię
+              {categoryPendingRemoval ? (
+                <span className="font-semibold text-foreground"> {categoryPendingRemoval.name}</span>
+              ) : null}
+              ?
+            </p>
+            <p>Aby kontynuować, upewnij się, że kategoria nie jest powiązana z żadnymi hasłami.</p>
+            {categoryDeleteError && (
+              <p className="text-sm text-red-600">{categoryDeleteError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsCategoryDeleteDialogOpen(false)
+                setCategoryPendingRemoval(null)
+                setCategoryDeleteError(null)
+              }}
+              disabled={isDeletingCategory}
+            >
+              Anuluj
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteCategory}
+              disabled={isDeletingCategory || !categoryPendingRemoval}
+            >
+              {isDeletingCategory ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Usuwam…
+                </span>
+              ) : (
+                'Usuń kategorię'
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

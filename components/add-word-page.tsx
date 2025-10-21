@@ -70,6 +70,9 @@ const selectTriggerStyles =
   'w-full rounded-sm border border-slate-400 bg-white px-3 py-3 text-base font-medium text-left text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-60'
 const separatorStyles = 'h-[2px] w-full bg-slate-900'
 
+const sortCategoriesByName = (items: CategoryOption[]): CategoryOption[] =>
+  [...items].sort((a, b) => a.name.localeCompare(b.name, 'pl', { sensitivity: 'base' }))
+
 export default function AddWordPage() {
   const createInitialForm = (): SubmissionForm => ({
     sourceWord: '',
@@ -129,7 +132,7 @@ export default function AddWordPage() {
         const data = (await response.json()) as { categories?: CategoryOption[] }
 
         if (!controller.signal.aborted) {
-          setCategoryOptions(data.categories ?? [])
+          setCategoryOptions(sortCategoriesByName(data.categories ?? []))
         }
       } catch (error) {
         if (!controller.signal.aborted) {

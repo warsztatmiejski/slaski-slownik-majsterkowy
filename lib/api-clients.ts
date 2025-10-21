@@ -275,7 +275,7 @@ export class DictionaryAPI {
 
   static async updateCategory(
     categoryId: string,
-    data: { name: string; description?: string | null },
+    data: { name: string; slug: string; description?: string | null },
   ): Promise<{ category: CategorySummary }> {
     return this.request(`/admin/categories/${categoryId}`, {
       method: 'PATCH',

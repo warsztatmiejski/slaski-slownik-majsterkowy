@@ -103,6 +103,21 @@ function computeLettersFromEntries(entries: EntryPreview[]): string[] {
 	).sort((a, b) => a.localeCompare(b, LOCALE, { sensitivity: "base" }));
 }
 
+const filterCategoriesWithEntries = <T extends { entryCount?: number }>(
+	items: T[]
+): T[] => items.filter((item) => (item.entryCount ?? 0) > 0);
+
+const sortCategoriesByName = <T extends { name: string }>(items: T[]): T[] =>
+	[...items].sort((a, b) =>
+		a.name.localeCompare(b.name, LOCALE, { sensitivity: "base" })
+	);
+
+const prepareCategories = <
+	T extends { name: string; entryCount?: number }
+>(
+	items: T[]
+): T[] => sortCategoriesByName(filterCategoriesWithEntries(items));
+
 export interface HomePageCategory {
 	id: string;
 	name: string;
@@ -165,7 +180,9 @@ export default function HomePage({
 	const [categoryEntries, setCategoryEntries] = useState<EntryPreview[]>([]);
 	const [categoryError, setCategoryError] = useState<string | null>(null);
 	const [isFetchingCategory, setIsFetchingCategory] = useState(false);
-	const [categoryList, setCategoryList] = useState(categories);
+	const [categoryList, setCategoryList] = useState(() =>
+		prepareCategories(categories)
+	);
 	const [isRefreshingCategories, setIsRefreshingCategories] = useState(false);
 	const [categoryRefreshError, setCategoryRefreshError] = useState<string | null>(null);
 	const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);
@@ -229,7 +246,7 @@ const [randomEntry, setRandomEntry] = useState<EntryPreview | null>(
     featuredEntry ?? recentEntries[0] ?? null
 );
 useEffect(() => {
-	setCategoryList(categories);
+	setCategoryList(prepareCategories(categories));
 }, [categories]);
 
 useEffect(() => {
@@ -675,7 +692,7 @@ useEffect(() => {
 			}
 
 			if (data.categories) {
-				setCategoryList(data.categories);
+				setCategoryList(prepareCategories(data.categories));
 			}
 		} catch (error) {
 			if ((error as Error).name === "AbortError") {
@@ -1514,7 +1531,7 @@ return () => {
 		) : null;
 
 	const addWordButton = (
-		<Button asChild className="w-full">
+		<Button asChild className="w-full uppercase">
 			<Link href="/dodaj">
 				<Sparkles className="mr-2 h-4 w-4" />
 				Dodaj słowo!

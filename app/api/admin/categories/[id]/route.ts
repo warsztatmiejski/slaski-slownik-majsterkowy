@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { createSlug } from '@/lib/utils'
 import { ensureAdminRequest } from '@/lib/auth'
 
 export async function PATCH(
@@ -13,9 +14,10 @@ export async function PATCH(
 
   try {
     const { id } = params
-    const body = (await request.json()) as { name?: string; description?: string | null }
+    const body = (await request.json()) as { name?: string; slug?: string; description?: string | null }
 
     const name = body.name?.trim()
+    const slugInput = body.slug?.trim()
     const description =
       body.description === undefined || body.description === null
         ? null
@@ -23,6 +25,18 @@ export async function PATCH(
 
     if (!name) {
       return NextResponse.json({ error: 'Nazwa kategorii jest wymagana.' }, { status: 400 })
+    }
+    if (!slugInput) {
+      return NextResponse.json({ error: 'Slug kategorii jest wymagany.' }, { status: 400 })
+    }
+
+    const computedSlug = createSlug(slugInput)
+
+    if (!computedSlug) {
+      return NextResponse.json(
+        { error: 'Nie udało się wygenerować slug-a dla kategorii.' },
+        { status: 400 },
+      )
     }
 
     const category = await prisma.category.findUnique({ where: { id } })
@@ -48,10 +62,28 @@ export async function PATCH(
       }
     }
 
+    if (computedSlug !== category.slug) {
+      const existingSlug = await prisma.category.findFirst({
+        where: {
+          slug: computedSlug,
+          NOT: { id },
+        },
+        select: { id: true },
+      })
+
+      if (existingSlug) {
+        return NextResponse.json(
+          { error: 'Kategoria o tym slug-u już istnieje.' },
+          { status: 409 },
+        )
+      }
+    }
+
     const updatedCategory = await prisma.category.update({
       where: { id },
       data: {
         name,
+        slug: computedSlug,
         description,
       },
       select: {
